@@ -11,10 +11,10 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { Call } from "@/types";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import MediaPicker from "@/components/MediaPicker";
 
 const emptyCall = {
   title: "",
@@ -29,10 +29,9 @@ const emptyCall = {
 export default function AdminCallsPage() {
   const [calls, setCalls] = useState<Call[]>([]);
   const [editing, setEditing] = useState<Partial<Call> | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   async function fetchCalls() {
-    const q = query(collection(db, "calls"), orderBy("date", "desc"));
+    const q = query(collection(getDb(), "calls"), orderBy("date", "desc"));
     const snap = await getDocs(q);
     setCalls(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Call[]);
   }
@@ -40,15 +39,6 @@ export default function AdminCallsPage() {
   useEffect(() => {
     fetchCalls();
   }, []);
-
-  const handleImageUpload = async (file: File) => {
-    setUploading(true);
-    const storageRef = ref(storage, `calls/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    setEditing((prev) => (prev ? { ...prev, image: url } : prev));
-    setUploading(false);
-  };
 
   const generateSlug = (title: string) =>
     title
@@ -70,9 +60,9 @@ export default function AdminCallsPage() {
     };
 
     if (editing.id) {
-      await updateDoc(doc(db, "calls", editing.id), data);
+      await updateDoc(doc(getDb(), "calls", editing.id), data);
     } else {
-      await addDoc(collection(db, "calls"), data);
+      await addDoc(collection(getDb(), "calls"), data);
     }
 
     setEditing(null);
@@ -81,7 +71,7 @@ export default function AdminCallsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this call?")) return;
-    await deleteDoc(doc(db, "calls", id));
+    await deleteDoc(doc(getDb(), "calls", id));
     fetchCalls();
   };
 
@@ -100,7 +90,6 @@ export default function AdminCallsPage() {
         </button>
       </div>
 
-      {/* Editor Modal */}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
@@ -160,24 +149,15 @@ export default function AdminCallsPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImageUpload(file);
-                  }}
-                  className="text-sm text-gray-400"
+                <MediaPicker
+                  value={editing.image || ""}
+                  onSelect={(url) => setEditing({ ...editing, image: url })}
+                  folder="calls"
                 />
-                {uploading && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
-                {editing.image && (
-                  <img src={editing.image} alt="Preview" className="mt-2 rounded h-32 object-cover" />
-                )}
               </div>
               <button
                 onClick={handleSave}
-                disabled={uploading}
-                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+                className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
               >
                 {editing.id ? "Update" : "Create"}
               </button>
@@ -186,7 +166,6 @@ export default function AdminCallsPage() {
         </div>
       )}
 
-      {/* List */}
       <div className="space-y-2">
         {calls.map((call) => (
           <div

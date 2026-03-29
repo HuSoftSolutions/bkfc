@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { NewsArticle } from "@/types";
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, Newspaper } from "lucide-react";
 
 export default function NewsArticlePage() {
   const params = useParams();
@@ -18,7 +17,10 @@ export default function NewsArticlePage() {
   useEffect(() => {
     async function fetchArticle() {
       try {
-        const q = query(collection(db, "news"), where("slug", "==", slug));
+        const q = query(
+          collection(getDb(), "news"),
+          where("slug", "==", slug)
+        );
         const snapshot = await getDocs(q);
         if (snapshot.size > 0) {
           const doc = snapshot.docs[0];
@@ -35,12 +37,13 @@ export default function NewsArticlePage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-800 rounded w-3/4" />
-          <div className="h-64 bg-gray-800 rounded" />
-          <div className="h-4 bg-gray-800 rounded w-full" />
-          <div className="h-4 bg-gray-800 rounded w-5/6" />
+      <div className="max-w-4xl mx-auto px-4 py-20">
+        <div className="animate-pulse space-y-6">
+          <div className="h-6 bg-gray-200 rounded w-32" />
+          <div className="h-10 bg-gray-200 rounded w-3/4" />
+          <div className="h-80 bg-gray-200 rounded-2xl" />
+          <div className="h-4 bg-gray-200 rounded w-full" />
+          <div className="h-4 bg-gray-200 rounded w-5/6" />
         </div>
       </div>
     );
@@ -48,9 +51,15 @@ export default function NewsArticlePage() {
 
   if (!article) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-white mb-4">Article Not Found</h1>
-        <Link href="/news" className="text-red-400 hover:underline">
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <Newspaper size={48} className="mx-auto text-gray-400 mb-4" />
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          Article Not Found
+        </h1>
+        <Link
+          href="/news"
+          className="text-red-600 hover:text-red-700 transition-colors"
+        >
           &larr; Back to News
         </Link>
       </div>
@@ -58,31 +67,47 @@ export default function NewsArticlePage() {
   }
 
   return (
-    <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Back link */}
       <Link
         href="/news"
-        className="inline-flex items-center gap-2 text-red-400 hover:text-red-300 text-sm mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm mb-8 transition-colors group"
       >
-        <ArrowLeft size={16} /> Back to News
+        <ArrowLeft
+          size={16}
+          className="group-hover:-translate-x-0.5 transition-transform"
+        />
+        Back to News
       </Link>
 
-      <p className="text-sm text-red-400 font-medium mb-2">{article.date}</p>
-      <h1 className="text-3xl md:text-4xl font-bold text-white mb-6">
+      {/* Date tag */}
+      <div className="mb-4">
+        <span className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-3 py-1.5 rounded-full w-fit">
+          <Calendar size={12} /> {article.date}
+        </span>
+      </div>
+
+      {/* Title */}
+      <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6 leading-tight">
         {article.title}
       </h1>
 
+      {/* Image */}
       {article.image && (
-        <div className="relative w-full h-64 md:h-96 rounded-xl overflow-hidden mb-8">
-          <Image
+        <div className="relative w-full rounded-2xl overflow-hidden mb-8">
+          <img
             src={article.image}
             alt={article.title}
-            fill
-            className="object-cover"
+            className="w-full h-auto"
           />
         </div>
       )}
 
-      <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+      {/* Divider */}
+      <div className="w-16 h-1 bg-red-600 rounded-full mb-8" />
+
+      {/* Body */}
+      <div className="text-gray-600 text-base md:text-lg leading-relaxed whitespace-pre-wrap">
         {article.content}
       </div>
     </article>

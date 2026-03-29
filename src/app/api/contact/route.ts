@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { verifyRecaptcha } from "@/lib/recaptcha";
-import { sendNotification } from "@/lib/twilio";
+import { sendNotificationEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify reCAPTCHA
     if (recaptchaToken) {
       const valid = await verifyRecaptcha(recaptchaToken);
       if (!valid) {
@@ -26,7 +25,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Save to Firestore
     const adminDb = getAdminDb();
     await adminDb.collection("contactSubmissions").add({
       name,
@@ -37,14 +35,18 @@ export async function POST(req: NextRequest) {
       read: false,
     });
 
-    // Send SMS notification
     try {
-      await sendNotification(
-        `New contact form submission from ${name} (${email}): ${message.substring(0, 100)}`
+      await sendNotificationEmail(
+        `New Contact Form: ${name}`,
+        `<h2>New Contact Form Submission</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone || "N/A"}</p>
+        <hr />
+        <p>${message.replace(/\n/g, "<br />")}</p>`
       );
     } catch {
-      // Don't fail the request if SMS fails
-      console.error("Failed to send SMS notification");
+      console.error("Failed to send email notification");
     }
 
     return NextResponse.json({ success: true });

@@ -14,6 +14,8 @@ export interface Officer {
   id: string;
   name: string;
   title: string;
+  rank: string;
+  servingSince?: string;
   image?: string;
   order: number;
 }
@@ -38,6 +40,49 @@ export interface NewsArticle {
   image: string;
   date: string;
   published: boolean;
+}
+
+export interface TicketOption {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category?: string;
+  maxQuantity?: number;
+  soldCount?: number;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  endDate?: string;
+  endTime?: string;
+  location: string;
+  image: string;
+  published: boolean;
+  // Ticketing
+  ticketingEnabled?: boolean;
+  payInPerson?: boolean;
+  ticketOptions?: TicketOption[];
+  registrationDeadline?: string;
+}
+
+export interface EventRegistration {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  name: string;
+  email: string;
+  phone: string;
+  items: { optionId: string; name: string; quantity: number; price: number }[];
+  total: number;
+  paymentMethod: "stripe" | "in-person";
+  paymentStatus: "pending" | "paid" | "failed";
+  stripeSessionId?: string;
+  createdAt: string;
 }
 
 export interface ContactFormData {

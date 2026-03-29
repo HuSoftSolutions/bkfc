@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getAppAuth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
@@ -11,7 +11,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(getAppAuth(), (u) => {
       if (u) {
         setUser(u);
       } else {

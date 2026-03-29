@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { verifyRecaptcha } from "@/lib/recaptcha";
-import { sendNotification } from "@/lib/twilio";
+import { sendNotificationEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
       city,
       state,
       zip,
+      position,
       message,
       recaptchaToken,
     } = body;
@@ -26,7 +27,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify reCAPTCHA
     if (recaptchaToken) {
       const valid = await verifyRecaptcha(recaptchaToken);
       if (!valid) {
@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Save to Firestore
     const adminDb = getAdminDb();
     await adminDb.collection("volunteerApplications").add({
       firstName,
@@ -48,18 +47,25 @@ export async function POST(req: NextRequest) {
       city,
       state: state || "NY",
       zip,
+      position: position || "",
       message: message || "",
       createdAt: new Date().toISOString(),
       reviewed: false,
     });
 
-    // Send SMS notification
     try {
-      await sendNotification(
-        `New volunteer application from ${firstName} ${lastName} (${phone})`
+      await sendNotificationEmail(
+        `New Volunteer Application: ${firstName} ${lastName}`,
+        `<h2>New Volunteer Application</h2>
+        <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Address:</strong> ${address}, ${city}, ${state || "NY"} ${zip}</p>
+        <p><strong>Position:</strong> ${position || "Not specified"}</p>
+        ${message ? `<hr /><p><strong>Message:</strong></p><p>${message.replace(/\n/g, "<br />")}</p>` : ""}`
       );
     } catch {
-      console.error("Failed to send SMS notification");
+      console.error("Failed to send email notification");
     }
 
     return NextResponse.json({ success: true });

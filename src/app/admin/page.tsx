@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import Link from "next/link";
 import { Siren, Newspaper, Mail, UserPlus } from "lucide-react";
 
@@ -26,10 +26,10 @@ export default function AdminDashboard() {
       try {
         const [callsSnap, newsSnap, messagesSnap, volunteersSnap] =
           await Promise.all([
-            getDocs(query(collection(db, "calls"), limit(1000))),
-            getDocs(query(collection(db, "news"), limit(1000))),
-            getDocs(query(collection(db, "contactSubmissions"), limit(1000))),
-            getDocs(query(collection(db, "volunteerApplications"), limit(1000))),
+            getDocs(query(collection(getDb(), "calls"), limit(1000))),
+            getDocs(query(collection(getDb(), "news"), limit(1000))),
+            getDocs(query(collection(getDb(), "contactSubmissions"), limit(1000))),
+            getDocs(query(collection(getDb(), "volunteerApplications"), limit(1000))),
           ]);
         setStats({
           calls: callsSnap.size,

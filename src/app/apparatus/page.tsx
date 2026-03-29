@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { Apparatus } from "@/types";
 import Hero from "@/components/Hero";
 import Image from "next/image";
@@ -34,7 +34,7 @@ export default function ApparatusPage() {
   useEffect(() => {
     async function fetchApparatus() {
       try {
-        const q = query(collection(db, "apparatus"), orderBy("order", "asc"));
+        const q = query(collection(getDb(), "apparatus"), orderBy("order", "asc"));
         const snapshot = await getDocs(q);
         if (snapshot.size > 0) {
           setApparatus(
@@ -61,7 +61,7 @@ export default function ApparatusPage() {
         {displayApparatus.map((unit) => (
           <div
             key={unit.id}
-            className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden"
+            className="bg-white border border-gray-200 rounded-xl overflow-hidden"
           >
             {unit.image && (
               <div className="relative w-full h-64 md:h-96">
@@ -74,21 +74,21 @@ export default function ApparatusPage() {
               </div>
             )}
             <div className="p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-white mb-1">
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">
                 {unit.name}
               </h2>
-              <p className="text-red-400 text-sm font-medium mb-4">
+              <p className="text-red-600 text-sm font-medium mb-4">
                 Unit #{unit.designation}
               </p>
-              <p className="text-gray-300 leading-relaxed mb-6">
+              <p className="text-gray-600 leading-relaxed mb-6">
                 {unit.description}
               </p>
               {unit.specs.length > 0 && (
                 <>
-                  <h3 className="text-white font-semibold mb-2">
+                  <h3 className="text-gray-900 font-semibold mb-2">
                     Specifications
                   </h3>
-                  <ul className="list-disc list-inside text-gray-400 text-sm space-y-1">
+                  <ul className="list-disc list-inside text-gray-500 text-sm space-y-1">
                     {unit.specs.map((spec, i) => (
                       <li key={i}>{spec}</li>
                     ))}

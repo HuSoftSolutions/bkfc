@@ -10,7 +10,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { Trash2, Mail, MailOpen } from "lucide-react";
 
 interface ContactMessage {
@@ -28,7 +28,7 @@ export default function AdminMessagesPage() {
   const [selected, setSelected] = useState<ContactMessage | null>(null);
 
   async function fetchMessages() {
-    const q = query(collection(db, "contactSubmissions"), orderBy("createdAt", "desc"));
+    const q = query(collection(getDb(), "contactSubmissions"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ContactMessage[]);
   }
@@ -38,14 +38,14 @@ export default function AdminMessagesPage() {
   }, []);
 
   const markRead = async (msg: ContactMessage) => {
-    await updateDoc(doc(db, "contactSubmissions", msg.id), { read: true });
+    await updateDoc(doc(getDb(), "contactSubmissions", msg.id), { read: true });
     setSelected(msg);
     fetchMessages();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this message?")) return;
-    await deleteDoc(doc(db, "contactSubmissions", id));
+    await deleteDoc(doc(getDb(), "contactSubmissions", id));
     if (selected?.id === id) setSelected(null);
     fetchMessages();
   };

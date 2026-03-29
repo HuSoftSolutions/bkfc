@@ -25,25 +25,19 @@ function getApp(): FirebaseApp {
   return _app;
 }
 
-export const db: Firestore = new Proxy({} as Firestore, {
-  get(_, prop) {
-    if (!_db) _db = getFirestore(getApp());
-    return (_db as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});
+export function getDb(): Firestore {
+  if (!_db) _db = getFirestore(getApp());
+  return _db;
+}
 
-export const storage: FirebaseStorage = new Proxy({} as FirebaseStorage, {
-  get(_, prop) {
-    if (!_storage) _storage = getStorage(getApp());
-    return (_storage as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});
+export function getAppStorage(): FirebaseStorage {
+  if (!_storage) _storage = getStorage(getApp());
+  return _storage;
+}
 
-export const auth: Auth = new Proxy({} as Auth, {
-  get(_, prop) {
-    if (!_auth) _auth = getAuth(getApp());
-    return (_auth as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});
+export function getAppAuth(): Auth {
+  if (!_auth) _auth = getAuth(getApp());
+  return _auth;
+}
 
 export default getApp;

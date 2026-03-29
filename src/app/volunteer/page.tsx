@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import Hero from "@/components/Hero";
+import { formatPhoneNumber } from "@/lib/formatPhone";
 
 export default function VolunteerPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -15,12 +16,15 @@ export default function VolunteerPage() {
     city: "",
     state: "NY",
     zip: "",
+    position: "",
     message: "",
   });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
-  const update = (field: string, value: string) =>
+  const update = (field: string, value: string) => {
+    if (field === "phone") value = formatPhoneNumber(value);
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -50,6 +54,7 @@ export default function VolunteerPage() {
           city: "",
           state: "NY",
           zip: "",
+          position: "",
           message: "",
         });
       } catch {
@@ -60,7 +65,7 @@ export default function VolunteerPage() {
   );
 
   const inputClass =
-    "w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-red-500 focus:outline-none transition-colors";
+    "w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:outline-none transition-colors";
 
   return (
     <>
@@ -70,16 +75,16 @@ export default function VolunteerPage() {
       />
 
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-red-700/20 border border-red-700/40 rounded-lg p-4 mb-8 text-center">
-          <p className="text-red-400 font-bold text-lg">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 text-center">
+          <p className="text-red-700 font-bold text-lg">
             IN CASE OF EMERGENCY DIAL 9-1-1
           </p>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-gray-500 text-sm mt-1">
             Station: (518) 883-3611
           </p>
         </div>
 
-        <div className="mb-10 text-gray-300 leading-relaxed space-y-4">
+        <div className="mb-10 text-gray-600 leading-relaxed space-y-4">
           <p>
             The Broadalbin-Kennyetto Fire Company is always looking for dedicated
             individuals to join our team of volunteers. Whether you&apos;re
@@ -93,14 +98,14 @@ export default function VolunteerPage() {
           </p>
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">
           Volunteer Interest Form
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">First Name *</label>
+              <label className="block text-sm text-gray-500 mb-1">First Name *</label>
               <input
                 type="text"
                 required
@@ -110,7 +115,7 @@ export default function VolunteerPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Last Name *</label>
+              <label className="block text-sm text-gray-500 mb-1">Last Name *</label>
               <input
                 type="text"
                 required
@@ -123,7 +128,7 @@ export default function VolunteerPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Email *</label>
+              <label className="block text-sm text-gray-500 mb-1">Email *</label>
               <input
                 type="email"
                 required
@@ -133,7 +138,7 @@ export default function VolunteerPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Phone *</label>
+              <label className="block text-sm text-gray-500 mb-1">Phone *</label>
               <input
                 type="tel"
                 required
@@ -145,7 +150,7 @@ export default function VolunteerPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Address *</label>
+            <label className="block text-sm text-gray-500 mb-1">Address *</label>
             <input
               type="text"
               required
@@ -157,7 +162,7 @@ export default function VolunteerPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">City *</label>
+              <label className="block text-sm text-gray-500 mb-1">City *</label>
               <input
                 type="text"
                 required
@@ -167,7 +172,7 @@ export default function VolunteerPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">State</label>
+              <label className="block text-sm text-gray-500 mb-1">State</label>
               <input
                 type="text"
                 value={form.state}
@@ -176,7 +181,7 @@ export default function VolunteerPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">ZIP *</label>
+              <label className="block text-sm text-gray-500 mb-1">ZIP *</label>
               <input
                 type="text"
                 required
@@ -188,7 +193,22 @@ export default function VolunteerPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-gray-500 mb-1">Position *</label>
+            <select
+              required
+              value={form.position}
+              onChange={(e) => update("position", e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Select a position...</option>
+              <option value="Active Firefighter">Active Firefighter</option>
+              <option value="Administrative">Administrative</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-500 mb-1">
               Why are you interested in volunteering?
             </label>
             <textarea
@@ -208,12 +228,12 @@ export default function VolunteerPage() {
           </button>
 
           {status === "sent" && (
-            <p className="text-green-400 text-sm text-center">
+            <p className="text-green-600 text-sm text-center">
               Application submitted! A member of our department will contact you soon.
             </p>
           )}
           {status === "error" && (
-            <p className="text-red-400 text-sm text-center">
+            <p className="text-red-600 text-sm text-center">
               Something went wrong. Please try again or call us at (518) 883-3611.
             </p>
           )}

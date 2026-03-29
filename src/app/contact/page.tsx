@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import Hero from "@/components/Hero";
+import { formatPhoneNumber } from "@/lib/formatPhone";
 import { Phone, Mail, MapPin } from "lucide-react";
 
 export default function ContactPage() {
@@ -45,30 +46,30 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Contact Info */}
           <div>
-            <div className="bg-red-700/20 border border-red-700/40 rounded-lg p-4 mb-8">
-              <p className="text-red-400 font-bold text-lg">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+              <p className="text-red-700 font-bold text-lg">
                 IN CASE OF EMERGENCY DIAL 9-1-1
               </p>
             </div>
 
-            <h2 className="text-2xl font-bold text-white mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Department Information
             </h2>
-            <div className="space-y-4 text-gray-300">
+            <div className="space-y-4 text-gray-600">
               <div className="flex items-center gap-3">
                 <Phone size={20} className="text-red-500 shrink-0" />
                 <div>
-                  <p className="font-medium text-white">Station Phone</p>
+                  <p className="font-medium text-gray-900">Station Phone</p>
                   <p>(518) 883-3611</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Mail size={20} className="text-red-500 shrink-0" />
                 <div>
-                  <p className="font-medium text-white">Email</p>
+                  <p className="font-medium text-gray-900">Email</p>
                   <a
                     href="mailto:Contact@BroadalbinFire.com"
-                    className="hover:text-red-400 transition-colors"
+                    className="hover:text-red-600 transition-colors"
                   >
                     Contact@BroadalbinFire.com
                   </a>
@@ -77,10 +78,10 @@ export default function ContactPage() {
               <div className="flex items-center gap-3">
                 <MapPin size={20} className="text-red-500 shrink-0" />
                 <div>
-                  <p className="font-medium text-white">Address</p>
+                  <p className="font-medium text-gray-900">Address</p>
                   <p>14 Pine Street</p>
                   <p>Broadalbin, NY 12025</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-400">
                     Mailing: PO Box 295, Broadalbin, NY 12025
                   </p>
                 </div>
@@ -90,47 +91,47 @@ export default function ContactPage() {
 
           {/* Contact Form */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Send a Message
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                <label className="block text-sm text-gray-500 mb-1">Name *</label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-red-500 focus:outline-none transition-colors"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Email *</label>
+                <label className="block text-sm text-gray-500 mb-1">Email *</label>
                 <input
                   type="email"
                   required
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-red-500 focus:outline-none transition-colors"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Phone</label>
+                <label className="block text-sm text-gray-500 mb-1">Phone</label>
                 <input
                   type="tel"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-red-500 focus:outline-none transition-colors"
+                  onChange={(e) => setForm({ ...form, phone: formatPhoneNumber(e.target.value) })}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Message *</label>
+                <label className="block text-sm text-gray-500 mb-1">Message *</label>
                 <textarea
                   required
                   rows={5}
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-red-500 focus:outline-none transition-colors resize-none"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
               <button
@@ -141,12 +142,12 @@ export default function ContactPage() {
                 {status === "sending" ? "Sending..." : "Send Message"}
               </button>
               {status === "sent" && (
-                <p className="text-green-400 text-sm">
+                <p className="text-green-600 text-sm">
                   Message sent successfully! We&apos;ll get back to you soon.
                 </p>
               )}
               {status === "error" && (
-                <p className="text-red-400 text-sm">
+                <p className="text-red-600 text-sm">
                   Something went wrong. Please try again or email us directly.
                 </p>
               )}

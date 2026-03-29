@@ -11,10 +11,10 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { NewsArticle } from "@/types";
 import { Plus, Pencil, Trash2, X, Eye, EyeOff } from "lucide-react";
+import MediaPicker from "@/components/MediaPicker";
 
 const emptyArticle = {
   title: "",
@@ -29,10 +29,9 @@ const emptyArticle = {
 export default function AdminNewsPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [editing, setEditing] = useState<Partial<NewsArticle> | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   async function fetchArticles() {
-    const q = query(collection(db, "news"), orderBy("date", "desc"));
+    const q = query(collection(getDb(), "news"), orderBy("date", "desc"));
     const snap = await getDocs(q);
     setArticles(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as NewsArticle[]);
   }
@@ -40,15 +39,6 @@ export default function AdminNewsPage() {
   useEffect(() => {
     fetchArticles();
   }, []);
-
-  const handleImageUpload = async (file: File) => {
-    setUploading(true);
-    const storageRef = ref(storage, `news/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    setEditing((prev) => (prev ? { ...prev, image: url } : prev));
-    setUploading(false);
-  };
 
   const generateSlug = (title: string) =>
     title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -66,9 +56,9 @@ export default function AdminNewsPage() {
     };
 
     if (editing.id) {
-      await updateDoc(doc(db, "news", editing.id), data);
+      await updateDoc(doc(getDb(), "news", editing.id), data);
     } else {
-      await addDoc(collection(db, "news"), data);
+      await addDoc(collection(getDb(), "news"), data);
     }
     setEditing(null);
     fetchArticles();
@@ -76,7 +66,7 @@ export default function AdminNewsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this article?")) return;
-    await deleteDoc(doc(db, "news", id));
+    await deleteDoc(doc(getDb(), "news", id));
     fetchArticles();
   };
 
@@ -154,19 +144,11 @@ export default function AdminNewsPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImageUpload(file);
-                  }}
-                  className="text-sm text-gray-400"
+                <MediaPicker
+                  value={editing.image || ""}
+                  onSelect={(url) => setEditing({ ...editing, image: url })}
+                  folder="news"
                 />
-                {uploading && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
-                {editing.image && (
-                  <img src={editing.image} alt="Preview" className="mt-2 rounded h-32 object-cover" />
-                )}
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                 <input
@@ -179,8 +161,7 @@ export default function AdminNewsPage() {
               </label>
               <button
                 onClick={handleSave}
-                disabled={uploading}
-                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+                className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
               >
                 {editing.id ? "Update" : "Create"}
               </button>

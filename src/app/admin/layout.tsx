@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getAppAuth } from "@/lib/firebase";
 import AdminGuard from "@/components/AdminGuard";
 import {
   LayoutDashboard,
@@ -14,6 +14,10 @@ import {
   Mail,
   UserPlus,
   LogOut,
+  Settings,
+  ImageIcon,
+  CalendarDays,
+  Ticket,
 } from "lucide-react";
 
 const ADMIN_NAV = [
@@ -23,7 +27,11 @@ const ADMIN_NAV = [
   { href: "/admin/apparatus", label: "Apparatus", icon: Truck },
   { href: "/admin/officers", label: "Officers", icon: Users },
   { href: "/admin/messages", label: "Messages", icon: Mail },
+  { href: "/admin/events", label: "Events", icon: CalendarDays },
+  { href: "/admin/registrations", label: "Registrations", icon: Ticket },
   { href: "/admin/volunteers", label: "Volunteers", icon: UserPlus },
+  { href: "/admin/media", label: "Media", icon: ImageIcon },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AdminLayout({
@@ -66,7 +74,7 @@ export default function AdminLayout({
             })}
           </nav>
           <button
-            onClick={() => signOut(auth)}
+            onClick={() => signOut(getAppAuth())}
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors mt-8 w-full"
           >
             <LogOut size={18} />

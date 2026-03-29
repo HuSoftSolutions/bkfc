@@ -10,7 +10,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { Trash2, CheckCircle, Clock } from "lucide-react";
 
 interface VolunteerApp {
@@ -33,7 +33,7 @@ export default function AdminVolunteersPage() {
   const [selected, setSelected] = useState<VolunteerApp | null>(null);
 
   async function fetchApps() {
-    const q = query(collection(db, "volunteerApplications"), orderBy("createdAt", "desc"));
+    const q = query(collection(getDb(), "volunteerApplications"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     setApps(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as VolunteerApp[]);
   }
@@ -43,7 +43,7 @@ export default function AdminVolunteersPage() {
   }, []);
 
   const toggleReviewed = async (app: VolunteerApp) => {
-    await updateDoc(doc(db, "volunteerApplications", app.id), {
+    await updateDoc(doc(getDb(), "volunteerApplications", app.id), {
       reviewed: !app.reviewed,
     });
     fetchApps();
@@ -51,7 +51,7 @@ export default function AdminVolunteersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this application?")) return;
-    await deleteDoc(doc(db, "volunteerApplications", id));
+    await deleteDoc(doc(getDb(), "volunteerApplications", id));
     if (selected?.id === id) setSelected(null);
     fetchApps();
   };

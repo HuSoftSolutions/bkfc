@@ -11,10 +11,10 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { Apparatus } from "@/types";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import MediaPicker from "@/components/MediaPicker";
 
 const emptyApparatus = {
   name: "",
@@ -29,10 +29,9 @@ export default function AdminApparatusPage() {
   const [apparatus, setApparatus] = useState<Apparatus[]>([]);
   const [editing, setEditing] = useState<Partial<Apparatus> | null>(null);
   const [specsText, setSpecsText] = useState("");
-  const [uploading, setUploading] = useState(false);
 
   async function fetchApparatus() {
-    const q = query(collection(db, "apparatus"), orderBy("order", "asc"));
+    const q = query(collection(getDb(), "apparatus"), orderBy("order", "asc"));
     const snap = await getDocs(q);
     setApparatus(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Apparatus[]);
   }
@@ -44,15 +43,6 @@ export default function AdminApparatusPage() {
   const startEdit = (item: Partial<Apparatus>) => {
     setEditing(item);
     setSpecsText((item.specs || []).join("\n"));
-  };
-
-  const handleImageUpload = async (file: File) => {
-    setUploading(true);
-    const storageRef = ref(storage, `apparatus/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    setEditing((prev) => (prev ? { ...prev, image: url } : prev));
-    setUploading(false);
   };
 
   const handleSave = async () => {
@@ -67,9 +57,9 @@ export default function AdminApparatusPage() {
     };
 
     if (editing.id) {
-      await updateDoc(doc(db, "apparatus", editing.id), data);
+      await updateDoc(doc(getDb(), "apparatus", editing.id), data);
     } else {
-      await addDoc(collection(db, "apparatus"), data);
+      await addDoc(collection(getDb(), "apparatus"), data);
     }
     setEditing(null);
     fetchApparatus();
@@ -77,7 +67,7 @@ export default function AdminApparatusPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this apparatus?")) return;
-    await deleteDoc(doc(db, "apparatus", id));
+    await deleteDoc(doc(getDb(), "apparatus", id));
     fetchApparatus();
   };
 
@@ -155,23 +145,14 @@ export default function AdminApparatusPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImageUpload(file);
-                  }}
-                  className="text-sm text-gray-400"
+                <MediaPicker
+                  value={editing.image || ""}
+                  onSelect={(url) => setEditing({ ...editing, image: url })}
+                  folder="apparatus"
                 />
-                {uploading && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
-                {editing.image && (
-                  <img src={editing.image} alt="Preview" className="mt-2 rounded h-32 object-cover" />
-                )}
               </div>
               <button
                 onClick={handleSave}
-                disabled={uploading}
                 className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
               >
                 {editing.id ? "Update" : "Create"}
