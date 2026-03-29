@@ -91,7 +91,7 @@ export default function Hero({
         {showStats && (
           <div className="mb-6">
             <img
-              src="/fire patch.png"
+              src="/bkfc-patch.png"
               alt="BKFC Patch"
               className="w-28 h-28 mx-auto drop-shadow-2xl"
             />

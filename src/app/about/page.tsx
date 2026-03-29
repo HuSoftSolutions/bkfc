@@ -96,13 +96,61 @@ export default function AboutPage() {
               The Broadalbin-Kennyetto Fire Company (BKFC) is a volunteer fire
               department located at 14 Pine Street, Broadalbin, NY 12025. We
               proudly serve the communities of Broadalbin and Mayfield in Fulton
-              County, New York.
+              County, New York. With {officers.length || 54} dedicated volunteer
+              members and one station, we respond to a wide range of emergencies
+              including structure fires, motor vehicle accidents, hazmat
+              incidents, and more.
+            </p>
+          </div>
+        </div>
+
+        {/* History */}
+        <div className="max-w-3xl mx-auto mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">Our History</h2>
+          <div className="text-gray-600 space-y-4 leading-relaxed">
+            <p>
+              On November 18, 1877 a very destructive fire consumed the
+              Broadalbin Baptist Church, its horse sheds, four barns, three
+              houses, one cow and other miscellaneous items. At that time
+              Broadalbin was without any organized means of combating the flames!
             </p>
             <p>
-              With {officers.length || 54} dedicated volunteer members and one station, we respond to
-              a wide range of emergencies including structure fires, motor
-              vehicle accidents, hazmat incidents, and more. Our members are
-              committed to protecting life and property in our community.
+              The severity of this conflagration stirred the local citizens into
+              joining together to investigate the need, and process, of forming a
+              fire company.
+            </p>
+            <p>
+              On June 8, 1878 the citizens of Broadalbin and Vail Mills met in
+              the upper room of W. H. Halliday&apos;s harness shop for the purpose of
+              organizing a fire company. One month later they took delivery of a
+              &quot;Little Giant&quot; fire engine. It used a &quot;chemical
+              fluid&quot; and it cost $500.00.
+            </p>
+            <p>
+              The equipment was stored in rented barns until October 1886 when a
+              new frame structure firehouse was built on School Street, to
+              provide the first firehouse for Broadalbin. The cost was $419.04.
+            </p>
+            <p>
+              Our company was incorporated following a meeting on October 2,
+              1886. Broadalbin was the third community in Fulton County to have a
+              fire company, having been preceded by the villages of Gloversville
+              and Johnstown (now cities).
+            </p>
+            <p>
+              Our first motorized fire fighting unit was a 1924 Reo Speedwagon
+              truck, outfitted by the Foamite-Childs Corporation of Utica, NY as
+              a fire truck.
+            </p>
+            <p>
+              A big step forward in the combating of village fires came when a
+              municipal water system was installed in 1928.
+            </p>
+            <p>
+              When you see the equipment available to the firefighters of today
+              and compare it to the very limited tools and machines of the early
+              twentieth century it is easy to understand why there were so many
+              large and serious fires in earlier days.
             </p>
           </div>
         </div>

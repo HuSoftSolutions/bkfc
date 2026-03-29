@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: "/news", label: "News" },
   { href: "/events", label: "Events" },
   { href: "/volunteer", label: "Volunteer" },
+  { href: "/donate", label: "Donate" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -55,7 +56,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <img
-              src="/fire patch.png"
+              src="/bkfc-patch.png"
               alt="BKFC"
               className="w-10 h-10 object-contain"
             />

@@ -27,6 +27,7 @@ import {
   MapPin,
   Newspaper,
   Siren,
+  Heart,
   CalendarDays,
 } from "lucide-react";
 
@@ -301,6 +302,33 @@ export default function HomePage() {
 
       {/* Map */}
       <MapSection />
+
+      {/* Donate section */}
+      <section className="relative bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="w-14 h-14 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Heart size={24} className="text-red-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Support Your Local Fire Company
+            </h2>
+            <p className="text-gray-500 leading-relaxed mb-8">
+              As an all-volunteer department, we rely on the generosity of our
+              community to maintain equipment, fund training, and keep our
+              firefighters safe. Every contribution helps us continue protecting
+              Broadalbin and Mayfield.
+            </p>
+            <Link
+              href="/donate"
+              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors"
+            >
+              <Heart size={18} />
+              Make a Donation
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Volunteer CTA band */}
       <section className="relative overflow-hidden">
