@@ -18,8 +18,12 @@ export default function ContactPage() {
 
       try {
         let recaptchaToken = "";
-        if (executeRecaptcha) {
-          recaptchaToken = await executeRecaptcha("contact");
+        try {
+          if (executeRecaptcha) {
+            recaptchaToken = await executeRecaptcha("contact");
+          }
+        } catch {
+          // reCAPTCHA not configured — continue without it
         }
 
         const res = await fetch("/api/contact", {

@@ -7,6 +7,7 @@ import { formatPhoneNumber } from "@/lib/formatPhone";
 
 export default function VolunteerPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
+  const [errorMsg, setErrorMsg] = useState("");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -33,8 +34,12 @@ export default function VolunteerPage() {
 
       try {
         let recaptchaToken = "";
-        if (executeRecaptcha) {
-          recaptchaToken = await executeRecaptcha("volunteer");
+        try {
+          if (executeRecaptcha) {
+            recaptchaToken = await executeRecaptcha("volunteer");
+          }
+        } catch {
+          // reCAPTCHA not configured — continue without it
         }
 
         const res = await fetch("/api/volunteer", {
@@ -43,7 +48,10 @@ export default function VolunteerPage() {
           body: JSON.stringify({ ...form, recaptchaToken }),
         });
 
-        if (!res.ok) throw new Error("Failed to send");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.details || data.error || "Failed to send");
+        }
         setStatus("sent");
         setForm({
           firstName: "",
@@ -57,7 +65,8 @@ export default function VolunteerPage() {
           position: "",
           message: "",
         });
-      } catch {
+      } catch (err) {
+        setErrorMsg(err instanceof Error ? err.message : "Unknown error");
         setStatus("error");
       }
     },
@@ -234,7 +243,7 @@ export default function VolunteerPage() {
           )}
           {status === "error" && (
             <p className="text-red-600 text-sm text-center">
-              Something went wrong. Please try again or call us at (518) 883-3611.
+              {errorMsg || "Something went wrong."} Please try again or call us at (518) 883-3611.
             </p>
           )}
         </form>

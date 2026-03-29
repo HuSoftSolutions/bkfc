@@ -51,9 +51,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Contact form error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Contact form error:", message);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: message },
       { status: 500 }
     );
   }

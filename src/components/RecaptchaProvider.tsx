@@ -7,12 +7,12 @@ export default function RecaptchaProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
-  if (!siteKey) return <>{children}</>;
-
+  // Always wrap with provider so useGoogleReCaptcha hook doesn't crash.
+  // If no key is configured, reCAPTCHA simply won't execute.
   return (
-    <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
+    <GoogleReCaptchaProvider reCaptchaKey={siteKey || "not-configured"}>
       {children}
     </GoogleReCaptchaProvider>
   );

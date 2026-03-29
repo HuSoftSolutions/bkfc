@@ -1,13 +1,27 @@
 export async function verifyRecaptcha(token: string): Promise<boolean> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
-  if (!secret) throw new Error("RECAPTCHA_SECRET_KEY not configured");
 
-  const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `secret=${secret}&response=${token}`,
-  });
+  // Skip verification if not configured or no token provided
+  if (!secret || !token) return true;
 
-  const data = await res.json();
-  return data.success && data.score >= 0.5;
+  try {
+    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `secret=${secret}&response=${token}`,
+    });
+
+    const data = await res.json();
+
+    // Log for debugging
+    if (!data.success) {
+      console.error("reCAPTCHA verification failed:", data["error-codes"]);
+    }
+
+    return data.success && (data.score === undefined || data.score >= 0.5);
+  } catch (err) {
+    console.error("reCAPTCHA verification error:", err);
+    // Don't block submissions if reCAPTCHA service is down
+    return true;
+  }
 }
