@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Phone, Mail, MapPin, ExternalLink } from "lucide-react";
+import { useContactEmail } from "@/lib/useContactEmail";
 
 export default function Footer() {
+  const contactEmail = useContactEmail();
   return (
     <footer className="bg-gray-900 text-gray-400">
       {/* Emergency banner */}
@@ -103,18 +107,20 @@ export default function Footer() {
                   </a>
                 </div>
               </li>
-              <li className="flex items-start gap-2.5">
-                <Mail size={14} className="text-red-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-gray-500 text-xs">Email</p>
-                  <a
-                    href="mailto:Contact@BroadalbinFire.com"
-                    className="text-gray-300 hover:text-white transition-colors"
-                  >
-                    Contact@BroadalbinFire.com
-                  </a>
-                </div>
-              </li>
+              {contactEmail && (
+                <li className="flex items-start gap-2.5">
+                  <Mail size={14} className="text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-gray-500 text-xs">Email</p>
+                    <a
+                      href={`mailto:${contactEmail}`}
+                      className="text-gray-300 hover:text-white transition-colors"
+                    >
+                      {contactEmail}
+                    </a>
+                  </div>
+                </li>
+              )}
               <li className="flex items-start gap-2.5">
                 <MapPin size={14} className="text-red-500 mt-0.5 shrink-0" />
                 <div>

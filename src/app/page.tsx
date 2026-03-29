@@ -5,7 +5,6 @@ import {
   collection,
   query,
   orderBy,
-  limit,
   getDocs,
   where,
 } from "firebase/firestore";

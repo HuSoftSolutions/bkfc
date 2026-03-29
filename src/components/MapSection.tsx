@@ -1,12 +1,14 @@
 "use client";
 
 import { MapPin, Phone, Mail, Navigation } from "lucide-react";
+import { useContactEmail } from "@/lib/useContactEmail";
 
 const MAPS_QUERY = "14+Pine+Street,+Broadalbin,+NY+12025";
 const STATION_LAT = 43.0594;
 const STATION_LNG = -74.1935;
 
 export default function MapSection() {
+  const contactEmail = useContactEmail();
   return (
     <section className="relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -72,17 +74,19 @@ export default function MapSection() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center shrink-0">
-                    <Mail size={16} className="text-green-600" />
+                {contactEmail && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center shrink-0">
+                      <Mail size={16} className="text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-0.5">Email</p>
+                      <a href={`mailto:${contactEmail}`} className="text-gray-900 text-sm hover:text-red-600 transition-colors">
+                        {contactEmail}
+                      </a>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-0.5">Email</p>
-                    <a href="mailto:Contact@BroadalbinFire.com" className="text-gray-900 text-sm hover:text-red-600 transition-colors">
-                      Contact@BroadalbinFire.com
-                    </a>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 

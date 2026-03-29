@@ -4,10 +4,12 @@ import { useState, useCallback } from "react";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import Hero from "@/components/Hero";
 import { formatPhoneNumber } from "@/lib/formatPhone";
+import { useContactEmail } from "@/lib/useContactEmail";
 import { Phone, Mail, MapPin } from "lucide-react";
 
 export default function ContactPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
+  const contactEmail = useContactEmail();
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
@@ -74,18 +76,20 @@ export default function ContactPage() {
                   <p>(518) 736-2100</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Mail size={20} className="text-red-500 shrink-0" />
-                <div>
-                  <p className="font-medium text-gray-900">Email</p>
-                  <a
-                    href="mailto:Contact@BroadalbinFire.com"
-                    className="hover:text-red-600 transition-colors"
-                  >
-                    Contact@BroadalbinFire.com
-                  </a>
+              {contactEmail && (
+                <div className="flex items-center gap-3">
+                  <Mail size={20} className="text-red-500 shrink-0" />
+                  <div>
+                    <p className="font-medium text-gray-900">Email</p>
+                    <a
+                      href={`mailto:${contactEmail}`}
+                      className="hover:text-red-600 transition-colors"
+                    >
+                      {contactEmail}
+                    </a>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex items-center gap-3">
                 <MapPin size={20} className="text-red-500 shrink-0" />
                 <div>

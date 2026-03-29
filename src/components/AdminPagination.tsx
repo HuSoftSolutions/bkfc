@@ -50,10 +50,3 @@ export default function AdminPagination({
   );
 }
 
-export function usePagination<T>(items: T[], perPage: number = 15) {
-  const { useState } = require("react");
-  const [page, setPage] = useState(1);
-  const totalPages = Math.ceil(items.length / perPage);
-  const paginated = items.slice((page - 1) * perPage, page * perPage);
-  return { page, setPage, totalPages, paginated };
-}

@@ -12,6 +12,7 @@ export default function AdminSettingsPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [heroImage, setHeroImage] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("https://www.facebook.com/Broadalbinfire");
+  const [publicEmail, setPublicEmail] = useState("");
   const [emailRouting, setEmailRouting] = useState({
     general: "",
     contact: "",
@@ -22,17 +23,19 @@ export default function AdminSettingsPage() {
   const [weatherStatus, setWeatherStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [emailStatus, setEmailStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [heroStatus, setHeroStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [contactStatus, setContactStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fbStatus, setFbStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const [weatherDoc, heroDoc, fbDoc, emailDoc] = await Promise.all([
+        const [weatherDoc, heroDoc, fbDoc, emailDoc, contactDoc] = await Promise.all([
           getDoc(doc(getDb(), "settings", "weather")),
           getDoc(doc(getDb(), "settings", "hero")),
           getDoc(doc(getDb(), "settings", "facebook")),
           getDoc(doc(getDb(), "settings", "emailRouting")),
+          getDoc(doc(getDb(), "settings", "contact")),
         ]);
         if (weatherDoc.exists()) {
           const data = weatherDoc.data();
@@ -44,6 +47,9 @@ export default function AdminSettingsPage() {
         }
         if (fbDoc.exists()) {
           setFacebookUrl(fbDoc.data().pageUrl || "https://www.facebook.com/Broadalbinfire");
+        }
+        if (contactDoc.exists()) {
+          setPublicEmail(contactDoc.data().email || "");
         }
         if (emailDoc.exists()) {
           const data = emailDoc.data();
@@ -133,6 +139,20 @@ export default function AdminSettingsPage() {
     setEmailRouting((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleContactSave = async () => {
+    setContactStatus("saving");
+    try {
+      await setDoc(doc(getDb(), "settings", "contact"), {
+        email: publicEmail,
+        updatedAt: new Date().toISOString(),
+      });
+      setContactStatus("saved");
+      setTimeout(() => setContactStatus("idle"), 2000);
+    } catch {
+      setContactStatus("error");
+    }
+  };
+
   const handleHeroSave = async () => {
     setHeroStatus("saving");
     try {
@@ -193,6 +213,42 @@ export default function AdminSettingsPage() {
             </button>
 
             {heroStatus === "error" && (
+              <p className="text-red-400 text-sm">Failed to save.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Public Contact Email */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-white mb-2">Public Contact Email</h2>
+          <p className="text-gray-400 text-sm mb-4">
+            The email address shown on the public site (footer, contact page, map).
+            Leave blank to hide the email from all public pages.
+          </p>
+          <div className="space-y-3">
+            <input
+              type="email"
+              value={publicEmail}
+              onChange={(e) => setPublicEmail(e.target.value)}
+              placeholder="e.g. Contact@BroadalbinFire.com"
+              className={inputClass}
+            />
+            <button
+              onClick={handleContactSave}
+              disabled={contactStatus === "saving"}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+            >
+              {contactStatus === "saving" ? (
+                "Saving..."
+              ) : contactStatus === "saved" ? (
+                <>
+                  <Check size={16} /> Saved
+                </>
+              ) : (
+                "Save"
+              )}
+            </button>
+            {contactStatus === "error" && (
               <p className="text-red-400 text-sm">Failed to save.</p>
             )}
           </div>
