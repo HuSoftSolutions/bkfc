@@ -11,6 +11,9 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Trash2, CheckCircle, Clock, Heart } from "lucide-react";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 interface Donation {
   id: string;
@@ -25,6 +28,7 @@ interface Donation {
 export default function AdminDonationsPage() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
+  const [page, setPage] = useState(1);
 
   async function fetchDonations() {
     const q = query(
@@ -35,6 +39,7 @@ export default function AdminDonationsPage() {
     setDonations(
       snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Donation[]
     );
+    setPage(1);
   }
 
   useEffect(() => {
@@ -51,6 +56,9 @@ export default function AdminDonationsPage() {
     filter === "all"
       ? donations
       : donations.filter((d) => d.paymentStatus === filter);
+
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const totalRaised = donations
     .filter((d) => d.paymentStatus === "paid")
@@ -91,7 +99,7 @@ export default function AdminDonationsPage() {
         {(["all", "paid", "pending"] as const).map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => { setFilter(f); setPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
               filter === f
                 ? "bg-red-600/20 text-red-400"
@@ -117,7 +125,7 @@ export default function AdminDonationsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((donation) => (
+            {paginated.map((donation) => (
               <tr
                 key={donation.id}
                 className="border-b border-gray-800/50 hover:bg-gray-800/30"
@@ -157,6 +165,7 @@ export default function AdminDonationsPage() {
           </p>
         )}
       </div>
+      <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

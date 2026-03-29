@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
         <p><strong>Phone:</strong> ${phone}</p>
         <p><strong>Address:</strong> ${address}, ${city}, ${state || "NY"} ${zip}</p>
         <p><strong>Position:</strong> ${position || "Not specified"}</p>
-        ${message ? `<hr /><p><strong>Message:</strong></p><p>${message.replace(/\n/g, "<br />")}</p>` : ""}`
+        ${message ? `<hr /><p><strong>Message:</strong></p><p>${message.replace(/\n/g, "<br />")}</p>` : ""}`,
+        "volunteer"
       );
     } catch {
       console.error("Failed to send email notification");

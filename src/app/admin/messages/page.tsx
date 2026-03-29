@@ -12,6 +12,9 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Trash2, Mail, MailOpen } from "lucide-react";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 interface ContactMessage {
   id: string;
@@ -26,11 +29,16 @@ interface ContactMessage {
 export default function AdminMessagesPage() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [selected, setSelected] = useState<ContactMessage | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(messages.length / PER_PAGE);
+  const paginated = messages.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   async function fetchMessages() {
     const q = query(collection(getDb(), "contactSubmissions"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ContactMessage[]);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -57,11 +65,11 @@ export default function AdminMessagesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* List */}
         <div className="space-y-2">
-          {messages.map((msg) => (
-            <button
+          {paginated.map((msg) => (
+            <div
               key={msg.id}
               onClick={() => markRead(msg)}
-              className={`w-full text-left bg-gray-900 border rounded-lg px-4 py-3 transition-colors ${
+              className={`w-full text-left bg-gray-900 border rounded-lg px-4 py-3 transition-colors cursor-pointer ${
                 selected?.id === msg.id
                   ? "border-red-600"
                   : msg.read
@@ -94,11 +102,12 @@ export default function AdminMessagesPage() {
               <p className="text-gray-500 text-xs">
                 {new Date(msg.createdAt).toLocaleDateString()}
               </p>
-            </button>
+            </div>
           ))}
           {messages.length === 0 && (
             <p className="text-gray-500 text-sm">No messages yet.</p>
           )}
+          <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
 
         {/* Detail */}

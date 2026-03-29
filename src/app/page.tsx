@@ -17,6 +17,7 @@ import WeatherForecast from "@/components/WeatherForecast";
 import MapSection from "@/components/MapSection";
 import FacebookFeed from "@/components/FacebookFeed";
 import PlaceholderImage from "@/components/PlaceholderImage";
+import { sortPinned } from "@/lib/sortPinned";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -29,6 +30,7 @@ import {
   Siren,
   Heart,
   CalendarDays,
+  Pin,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -44,13 +46,11 @@ export default function HomePage() {
       try {
         const q = query(
           collection(getDb(), "calls"),
-          orderBy("date", "desc"),
-          limit(6)
+          orderBy("date", "desc")
         );
         const snapshot = await getDocs(q);
-        setCalls(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[]
-        );
+        const all = sortPinned(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[]);
+        setCalls(all.slice(0, 6));
       } catch (err) {
         console.error("Error fetching calls:", err);
       } finally {
@@ -63,13 +63,11 @@ export default function HomePage() {
         const q = query(
           collection(getDb(), "news"),
           where("published", "==", true),
-          orderBy("date", "desc"),
-          limit(6)
+          orderBy("date", "desc")
         );
         const snapshot = await getDocs(q);
-        setNews(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as NewsArticle[]
-        );
+        const all = sortPinned(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as NewsArticle[]);
+        setNews(all.slice(0, 6));
       } catch (err) {
         console.error("Error fetching news:", err);
       } finally {
@@ -84,13 +82,11 @@ export default function HomePage() {
           collection(getDb(), "events"),
           where("published", "==", true),
           where("date", ">=", today),
-          orderBy("date", "desc"),
-          limit(6)
+          orderBy("date", "desc")
         );
         const snapshot = await getDocs(q);
-        setEvents(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Event[]
-        );
+        const all = sortPinned(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Event[]);
+        setEvents(all.slice(0, 6));
       } catch (err) {
         console.error("Error fetching events:", err);
       } finally {
@@ -137,9 +133,36 @@ export default function HomePage() {
       {/* Weather */}
       <WeatherForecast />
 
+      {/* Donate section */}
+      <section className="relative bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="w-14 h-14 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Heart size={24} className="text-red-600" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+              Support Your Local Fire Company
+            </h2>
+            <p className="text-gray-500 leading-relaxed mb-8">
+              As an all-volunteer department, we rely on the generosity of our
+              community to maintain equipment, fund training, and keep our
+              firefighters safe. Every contribution helps us continue protecting
+              Broadalbin and Mayfield.
+            </p>
+            <Link
+              href="/donate"
+              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors"
+            >
+              <Heart size={18} />
+              Make a Donation
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Upcoming Events */}
       <section className="relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
           <SectionHeader
             icon={<CalendarDays size={20} />}
             title="Upcoming Events"
@@ -168,6 +191,11 @@ export default function HomePage() {
                       />
                     ) : (
                       <PlaceholderImage variant="event" className="h-40" />
+                    )}
+                    {event.pinned && (
+                      <div className="absolute top-3 right-3 bg-yellow-500 rounded-full p-1 shadow">
+                        <Pin size={12} className="text-white rotate-45" />
+                      </div>
                     )}
                   </div>
                   <div className="p-5">
@@ -207,7 +235,7 @@ export default function HomePage() {
                         {event.description}
                       </p>
                     )}
-                    <div className="mt-4 flex items-center gap-1 text-red-400 text-sm font-medium">
+                    <div className="mt-4 flex items-center gap-1 text-red-600 text-sm font-medium whitespace-nowrap">
                       View Details <ArrowUpRight size={14} />
                     </div>
                   </div>
@@ -220,7 +248,7 @@ export default function HomePage() {
 
       {/* Latest News */}
       <section className="relative bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
           <SectionHeader
             icon={<Newspaper size={20} />}
             title="Latest News"
@@ -255,6 +283,11 @@ export default function HomePage() {
                         {article.date}
                       </span>
                     </div>
+                    {article.pinned && (
+                      <div className="absolute top-3 right-3 bg-yellow-500 rounded-full p-1 shadow">
+                        <Pin size={12} className="text-white rotate-45" />
+                      </div>
+                    )}
                   </div>
                   <div className="p-5">
                     <h3 className="text-gray-900 font-bold mb-2 group-hover:text-red-700 transition-colors leading-snug">
@@ -273,7 +306,7 @@ export default function HomePage() {
 
       {/* Recent Calls */}
       <section className="relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
           <SectionHeader
             icon={<Siren size={20} />}
             title="Recent Calls"
@@ -303,50 +336,22 @@ export default function HomePage() {
       {/* Map */}
       <MapSection />
 
-      {/* Donate section */}
-      <section className="relative bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="w-14 h-14 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Heart size={24} className="text-red-600" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Support Your Local Fire Company
-            </h2>
-            <p className="text-gray-500 leading-relaxed mb-8">
-              As an all-volunteer department, we rely on the generosity of our
-              community to maintain equipment, fund training, and keep our
-              firefighters safe. Every contribution helps us continue protecting
-              Broadalbin and Mayfield.
-            </p>
-            <Link
-              href="/donate"
-              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors"
-            >
-              <Heart size={18} />
-              Make a Donation
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Volunteer CTA band */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-900" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
               Ready to Make a Difference?
             </h2>
-            <p className="text-red-200 text-lg">
-              Join 54 volunteers protecting our community. No experience
-              necessary.
+            <p className="text-red-200 text-base sm:text-lg">
+              Join our volunteers protecting the community. No experience necessary.
             </p>
           </div>
           <Link
             href="/volunteer"
-            className="shrink-0 bg-white text-red-700 font-bold px-8 py-4 rounded-xl hover:bg-gray-100 transition-all hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
+            className="shrink-0 bg-white text-red-700 font-bold px-8 py-4 rounded-xl hover:bg-gray-100 transition-all whitespace-nowrap"
           >
             Apply Now
           </Link>
@@ -369,21 +374,21 @@ function SectionHeader({
   href?: string;
 }) {
   return (
-    <div className="flex items-center justify-between mb-10">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600">
+    <div className="flex items-center justify-between mb-8 sm:mb-10 gap-4">
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
           {icon}
         </div>
-        <h2 className="text-3xl font-bold text-gray-900">{title}</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">{title}</h2>
       </div>
       {href && (
         <Link
           href={href}
-          className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-sm font-medium transition-colors group"
+          className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-medium transition-colors group whitespace-nowrap shrink-0"
         >
           View All{" "}
           <ArrowRight
-            size={16}
+            size={14}
             className="group-hover:translate-x-0.5 transition-transform"
           />
         </Link>

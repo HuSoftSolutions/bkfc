@@ -44,6 +44,8 @@ export default function Navbar() {
               Emergency: <strong className="text-gray-900">911</strong>
             </span>
             <span className="mx-2 text-gray-300">|</span>
+            <span>Non-Emergency: (518) 736-2100</span>
+            <span className="mx-2 text-gray-300">|</span>
             <span>Station: (518) 883-3611</span>
           </div>
           <WeatherWidget />

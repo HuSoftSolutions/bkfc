@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   collection,
   query,
@@ -13,8 +13,11 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Officer } from "@/types";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 const RANK_OPTIONS = [
   "Chief",
@@ -48,11 +51,45 @@ const emptyOfficer: Partial<Officer> = {
 export default function AdminOfficersPage() {
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [editing, setEditing] = useState<Partial<Officer> | null>(null);
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [rankFilter, setRankFilter] = useState("");
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearch = (value: string) => {
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(value.toLowerCase().trim());
+      setPage(1);
+    }, 1500);
+  };
+
+  // Get unique ranks from data for filter options
+  const availableRanks = [...new Set(officers.map((o) => o.rank || "").filter(Boolean))].sort();
+
+  const filtered = officers.filter((o) => {
+    if (rankFilter && (o.rank || "") !== rankFilter) return false;
+    if (searchQuery) {
+      return (
+        o.name.toLowerCase().includes(searchQuery) ||
+        (o.rank || "").toLowerCase().includes(searchQuery) ||
+        (o.title || "").toLowerCase().includes(searchQuery) ||
+        (o.servingSince || "").includes(searchQuery)
+      );
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   async function fetchOfficers() {
     const q = query(collection(getDb(), "officers"), orderBy("order", "asc"));
     const snap = await getDocs(q);
     setOfficers(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Officer[]);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -180,8 +217,37 @@ export default function AdminOfficersPage() {
         </div>
       )}
 
+      {/* Search + Filter */}
+      <div className="flex gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search by name, rank, or title..."
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none transition-colors"
+          />
+          {searchQuery && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <select
+          value={rankFilter}
+          onChange={(e) => { setRankFilter(e.target.value); setPage(1); }}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 focus:outline-none transition-colors min-w-[160px]"
+        >
+          <option value="">All Ranks</option>
+          {availableRanks.map((rank) => (
+            <option key={rank} value={rank}>{rank}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="space-y-2">
-        {officers.map((officer) => (
+        {paginated.map((officer) => (
           <div
             key={officer.id}
             className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
@@ -204,10 +270,13 @@ export default function AdminOfficersPage() {
             </div>
           </div>
         ))}
-        {officers.length === 0 && (
-          <p className="text-gray-500 text-sm">No members yet.</p>
+        {filtered.length === 0 && (
+          <p className="text-gray-500 text-sm">
+            {searchQuery ? `No members matching "${searchQuery}".` : "No members yet."}
+          </p>
         )}
       </div>
+      <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

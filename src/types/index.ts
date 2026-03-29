@@ -8,6 +8,7 @@ export interface Call {
   image: string;
   images?: string[];
   slug: string;
+  pinned?: boolean;
 }
 
 export interface Officer {
@@ -40,6 +41,7 @@ export interface NewsArticle {
   image: string;
   date: string;
   published: boolean;
+  pinned?: boolean;
 }
 
 export interface TicketOption {
@@ -64,6 +66,7 @@ export interface Event {
   image: string;
   published: boolean;
   // Ticketing
+  pinned?: boolean;
   ticketingEnabled?: boolean;
   payInPerson?: boolean;
   ticketOptions?: TicketOption[];

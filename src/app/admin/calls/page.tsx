@@ -13,8 +13,11 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Call } from "@/types";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Pin, PinOff } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 const emptyCall = {
   title: "",
@@ -29,11 +32,16 @@ const emptyCall = {
 export default function AdminCallsPage() {
   const [calls, setCalls] = useState<Call[]>([]);
   const [editing, setEditing] = useState<Partial<Call> | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(calls.length / PER_PAGE);
+  const paginated = calls.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   async function fetchCalls() {
     const q = query(collection(getDb(), "calls"), orderBy("date", "desc"));
     const snap = await getDocs(q);
     setCalls(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Call[]);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -66,6 +74,11 @@ export default function AdminCallsPage() {
     }
 
     setEditing(null);
+    fetchCalls();
+  };
+
+  const togglePin = async (call: Call) => {
+    await updateDoc(doc(getDb(), "calls", call.id), { pinned: !call.pinned });
     fetchCalls();
   };
 
@@ -167,7 +180,7 @@ export default function AdminCallsPage() {
       )}
 
       <div className="space-y-2">
-        {calls.map((call) => (
+        {paginated.map((call) => (
           <div
             key={call.id}
             className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
@@ -179,6 +192,13 @@ export default function AdminCallsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => togglePin(call)}
+                className={`p-1 ${call.pinned ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}
+                title={call.pinned ? "Unpin" : "Pin to top"}
+              >
+                {call.pinned ? <Pin size={16} /> : <PinOff size={16} />}
+              </button>
               <button
                 onClick={() => setEditing(call)}
                 className="text-gray-400 hover:text-white p-1"
@@ -198,6 +218,7 @@ export default function AdminCallsPage() {
           <p className="text-gray-500 text-sm">No calls yet. Create one to get started.</p>
         )}
       </div>
+      <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

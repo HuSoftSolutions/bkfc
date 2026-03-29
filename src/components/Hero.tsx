@@ -31,6 +31,7 @@ export default function Hero({
 }: HeroProps) {
   const [bgImage, setBgImage] = useState(backgroundImage || "");
   const [callCount, setCallCount] = useState<number | null>(null);
+  const [volunteerCount, setVolunteerCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!useSettingsImage || backgroundImage) return;
@@ -51,23 +52,25 @@ export default function Hero({
   useEffect(() => {
     if (!showCallCount) return;
 
-    async function loadCallCount() {
+    async function loadCounts() {
       try {
-        const snapshot = await getCountFromServer(
-          collection(getDb(), "calls")
-        );
-        setCallCount(snapshot.data().count);
+        const [callsSnap, officersSnap] = await Promise.all([
+          getCountFromServer(collection(getDb(), "calls")),
+          getCountFromServer(collection(getDb(), "officers")),
+        ]);
+        setCallCount(callsSnap.data().count);
+        setVolunteerCount(officersSnap.data().count);
       } catch {
         // fallback
       }
     }
-    loadCallCount();
+    loadCounts();
   }, [showCallCount]);
 
   return (
     <section
       className={`relative flex items-center justify-center bg-gray-900 overflow-hidden ${
-        fullHeight ? "min-h-[85vh]" : "min-h-[30vh] py-16"
+        fullHeight ? "min-h-[85vh] py-16 sm:py-0" : "min-h-[30vh] py-12 sm:py-16"
       }`}
     >
       {/* Background image with parallax feel */}
@@ -122,30 +125,32 @@ export default function Hero({
 
         {/* Stats row */}
         {showCallCount && (
-          <div className="flex flex-wrap items-center justify-center gap-6 mb-10">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mb-8 sm:mb-10">
             {callCount !== null && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-4 text-center min-w-[140px]">
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-center min-w-[100px] sm:min-w-[140px]">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Siren size={18} className="text-red-400" />
                 </div>
-                <p className="text-3xl font-bold text-white">
+                <p className="text-2xl sm:text-3xl font-bold text-white">
                   {callCount.toLocaleString()}
                 </p>
                 <p className="text-gray-400 text-xs mt-0.5">Calls Responded</p>
               </div>
             )}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-4 text-center min-w-[140px]">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-center min-w-[100px] sm:min-w-[140px]">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Users size={18} className="text-blue-400" />
               </div>
-              <p className="text-3xl font-bold text-white">54</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">
+                {volunteerCount !== null ? volunteerCount : "—"}
+              </p>
               <p className="text-gray-400 text-xs mt-0.5">Volunteers</p>
             </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-4 text-center min-w-[140px]">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-center min-w-[100px] sm:min-w-[140px]">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Shield size={18} className="text-green-400" />
               </div>
-              <p className="text-3xl font-bold text-white">24/7</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">24/7</p>
               <p className="text-gray-400 text-xs mt-0.5">Coverage</p>
             </div>
           </div>
@@ -153,16 +158,16 @@ export default function Hero({
 
         {/* CTA buttons */}
         {ctaText && ctaHref && (
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 w-full sm:w-auto px-4 sm:px-0">
             <Link
               href={ctaHref}
-              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-all hover:shadow-lg hover:shadow-red-600/25 hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-all whitespace-nowrap"
             >
               {ctaText}
             </Link>
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 text-white font-medium px-8 py-3.5 rounded-xl transition-all"
+              className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 text-white font-medium px-8 py-3.5 rounded-xl transition-all whitespace-nowrap"
             >
               Contact Us
             </Link>

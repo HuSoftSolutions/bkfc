@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Phone:</strong> ${phone || "N/A"}</p>
         <hr />
-        <p>${message.replace(/\n/g, "<br />")}</p>`
+        <p>${message.replace(/\n/g, "<br />")}</p>`,
+        "contact"
       );
     } catch {
       console.error("Failed to send email notification");

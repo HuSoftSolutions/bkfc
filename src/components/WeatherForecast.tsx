@@ -97,7 +97,7 @@ export default function WeatherForecast() {
                 {getWeatherIcon(current.weathercode, current.is_day === 1)}
               </span>
               <div>
-                <p className="text-4xl font-bold text-gray-900">
+                <p className="text-3xl sm:text-4xl font-bold text-gray-900">
                   {celsiusToFahrenheit(current.temperature)}°F
                 </p>
                 <p className="text-gray-500">

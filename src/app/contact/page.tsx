@@ -68,6 +68,13 @@ export default function ContactPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <Phone size={20} className="text-red-500 shrink-0" />
+                <div>
+                  <p className="font-medium text-gray-900">Non-Emergency</p>
+                  <p>(518) 736-2100</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
                 <Mail size={20} className="text-red-500 shrink-0" />
                 <div>
                   <p className="font-medium text-gray-900">Email</p>

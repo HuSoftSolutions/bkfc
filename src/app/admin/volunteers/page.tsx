@@ -12,6 +12,9 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Trash2, CheckCircle, Clock } from "lucide-react";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 interface VolunteerApp {
   id: string;
@@ -31,11 +34,16 @@ interface VolunteerApp {
 export default function AdminVolunteersPage() {
   const [apps, setApps] = useState<VolunteerApp[]>([]);
   const [selected, setSelected] = useState<VolunteerApp | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(apps.length / PER_PAGE);
+  const paginated = apps.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   async function fetchApps() {
     const q = query(collection(getDb(), "volunteerApplications"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     setApps(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as VolunteerApp[]);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -62,11 +70,11 @@ export default function AdminVolunteersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          {apps.map((app) => (
-            <button
+          {paginated.map((app) => (
+            <div
               key={app.id}
               onClick={() => setSelected(app)}
-              className={`w-full text-left bg-gray-900 border rounded-lg px-4 py-3 transition-colors ${
+              className={`w-full text-left bg-gray-900 border rounded-lg px-4 py-3 transition-colors cursor-pointer ${
                 selected?.id === app.id
                   ? "border-red-600"
                   : app.reviewed
@@ -99,11 +107,12 @@ export default function AdminVolunteersPage() {
               <p className="text-gray-500 text-xs">
                 {new Date(app.createdAt).toLocaleDateString()}
               </p>
-            </button>
+            </div>
           ))}
           {apps.length === 0 && (
             <p className="text-gray-500 text-sm">No applications yet.</p>
           )}
+          <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
 
         {selected && (

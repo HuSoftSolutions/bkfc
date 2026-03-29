@@ -61,6 +61,18 @@ export default function MapSection() {
                 </div>
 
                 <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                    <Phone size={16} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-0.5">Non-Emergency</p>
+                    <a href="tel:5187362100" className="text-gray-900 text-sm hover:text-red-600 transition-colors">
+                      (518) 736-2100
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center shrink-0">
                     <Mail size={16} className="text-green-600" />
                   </div>

@@ -7,7 +7,8 @@ import { Call } from "@/types";
 import Hero from "@/components/Hero";
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, ArrowUpRight, ChevronLeft, ChevronRight, Pin } from "lucide-react";
+import { sortPinned } from "@/lib/sortPinned";
 import PlaceholderImage from "@/components/PlaceholderImage";
 
 const PER_PAGE = 9;
@@ -32,8 +33,9 @@ export default function CallsPage() {
     fetchCalls();
   }, []);
 
-  const totalPages = Math.ceil(calls.length / PER_PAGE);
-  const paginated = calls.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const sorted = sortPinned(calls);
+  const totalPages = Math.ceil(sorted.length / PER_PAGE);
+  const paginated = sorted.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <>

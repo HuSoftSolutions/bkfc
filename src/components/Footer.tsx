@@ -92,6 +92,18 @@ export default function Footer() {
                 </div>
               </li>
               <li className="flex items-start gap-2.5">
+                <Phone size={14} className="text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-gray-500 text-xs">Non-Emergency</p>
+                  <a
+                    href="tel:5187362100"
+                    className="text-gray-300 hover:text-white transition-colors"
+                  >
+                    (518) 736-2100
+                  </a>
+                </div>
+              </li>
+              <li className="flex items-start gap-2.5">
                 <Mail size={14} className="text-red-500 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-gray-500 text-xs">Email</p>

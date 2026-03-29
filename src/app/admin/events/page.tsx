@@ -13,9 +13,12 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Event, TicketOption } from "@/types";
-import { Plus, Pencil, Trash2, X, Eye, EyeOff, Ticket } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Eye, EyeOff, Ticket, Pin, PinOff } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 import Link from "next/link";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 const emptyEvent: Partial<Event> = {
   title: "",
@@ -36,11 +39,16 @@ const emptyEvent: Partial<Event> = {
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [editing, setEditing] = useState<Partial<Event> | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(events.length / PER_PAGE);
+  const paginated = events.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   async function fetchEvents() {
     const q = query(collection(getDb(), "events"), orderBy("date", "desc"));
     const snap = await getDocs(q);
     setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Event[]);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -113,6 +121,11 @@ export default function AdminEventsPage() {
     }
 
     setEditing(null);
+    fetchEvents();
+  };
+
+  const togglePin = async (event: Event) => {
+    await updateDoc(doc(getDb(), "events", event.id), { pinned: !event.pinned });
     fetchEvents();
   };
 
@@ -320,7 +333,7 @@ export default function AdminEventsPage() {
       )}
 
       <div className="space-y-2">
-        {events.map((event) => (
+        {paginated.map((event) => (
           <div
             key={event.id}
             className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
@@ -347,6 +360,13 @@ export default function AdminEventsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => togglePin(event)}
+                className={`p-1 ${event.pinned ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}
+                title={event.pinned ? "Unpin" : "Pin to top"}
+              >
+                {event.pinned ? <Pin size={16} /> : <PinOff size={16} />}
+              </button>
               <button onClick={() => setEditing(event)} className="text-gray-400 hover:text-white p-1">
                 <Pencil size={16} />
               </button>
@@ -360,6 +380,7 @@ export default function AdminEventsPage() {
           <p className="text-gray-500 text-sm">No events yet. Create one to get started.</p>
         )}
       </div>
+      <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

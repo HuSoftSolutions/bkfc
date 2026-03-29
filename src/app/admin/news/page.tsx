@@ -13,8 +13,11 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { NewsArticle } from "@/types";
-import { Plus, Pencil, Trash2, X, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Eye, EyeOff, Pin, PinOff } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 const emptyArticle = {
   title: "",
@@ -29,11 +32,16 @@ const emptyArticle = {
 export default function AdminNewsPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [editing, setEditing] = useState<Partial<NewsArticle> | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(articles.length / PER_PAGE);
+  const paginated = articles.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   async function fetchArticles() {
     const q = query(collection(getDb(), "news"), orderBy("date", "desc"));
     const snap = await getDocs(q);
     setArticles(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as NewsArticle[]);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -61,6 +69,11 @@ export default function AdminNewsPage() {
       await addDoc(collection(getDb(), "news"), data);
     }
     setEditing(null);
+    fetchArticles();
+  };
+
+  const togglePin = async (article: NewsArticle) => {
+    await updateDoc(doc(getDb(), "news", article.id), { pinned: !article.pinned });
     fetchArticles();
   };
 
@@ -171,7 +184,7 @@ export default function AdminNewsPage() {
       )}
 
       <div className="space-y-2">
-        {articles.map((article) => (
+        {paginated.map((article) => (
           <div
             key={article.id}
             className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
@@ -188,6 +201,13 @@ export default function AdminNewsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => togglePin(article)}
+                className={`p-1 ${article.pinned ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}
+                title={article.pinned ? "Unpin" : "Pin to top"}
+              >
+                {article.pinned ? <Pin size={16} /> : <PinOff size={16} />}
+              </button>
               <button onClick={() => setEditing(article)} className="text-gray-400 hover:text-white p-1">
                 <Pencil size={16} />
               </button>
@@ -201,6 +221,7 @@ export default function AdminNewsPage() {
           <p className="text-gray-500 text-sm">No articles yet.</p>
         )}
       </div>
+      <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

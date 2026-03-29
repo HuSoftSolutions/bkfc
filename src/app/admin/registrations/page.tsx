@@ -13,11 +13,15 @@ import {
 import { getDb } from "@/lib/firebase";
 import { EventRegistration } from "@/types";
 import { Trash2, CheckCircle, Clock, CreditCard, Banknote } from "lucide-react";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 export default function AdminRegistrationsPage() {
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [selected, setSelected] = useState<EventRegistration | null>(null);
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
+  const [page, setPage] = useState(1);
 
   async function fetchRegistrations() {
     const q = query(
@@ -28,6 +32,7 @@ export default function AdminRegistrationsPage() {
     setRegistrations(
       snap.docs.map((d) => ({ id: d.id, ...d.data() })) as EventRegistration[]
     );
+    setPage(1);
   }
 
   useEffect(() => {
@@ -52,6 +57,9 @@ export default function AdminRegistrationsPage() {
     filter === "all"
       ? registrations
       : registrations.filter((r) => r.paymentStatus === filter);
+
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const totalRevenue = registrations
     .filter((r) => r.paymentStatus === "paid")
@@ -86,7 +94,7 @@ export default function AdminRegistrationsPage() {
         {(["all", "paid", "pending"] as const).map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => { setFilter(f); setPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
               filter === f
                 ? "bg-red-600/20 text-red-400"
@@ -101,11 +109,11 @@ export default function AdminRegistrationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* List */}
         <div className="space-y-2">
-          {filtered.map((reg) => (
-            <button
+          {paginated.map((reg) => (
+            <div
               key={reg.id}
               onClick={() => setSelected(reg)}
-              className={`w-full text-left bg-gray-900 border rounded-lg px-4 py-3 transition-colors ${
+              className={`w-full text-left bg-gray-900 border rounded-lg px-4 py-3 transition-colors cursor-pointer ${
                 selected?.id === reg.id ? "border-red-600" : "border-gray-800"
               }`}
             >
@@ -136,11 +144,12 @@ export default function AdminRegistrationsPage() {
               <p className="text-gray-500 text-xs mt-1">
                 {reg.eventTitle} · {new Date(reg.createdAt).toLocaleDateString()}
               </p>
-            </button>
+            </div>
           ))}
           {filtered.length === 0 && (
             <p className="text-gray-500 text-sm">No registrations found.</p>
           )}
+          <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
 
         {/* Detail */}

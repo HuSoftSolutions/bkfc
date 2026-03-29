@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { geocodeZip } from "@/lib/weather";
-import { Settings, Check } from "lucide-react";
+import { Settings, Check, Mail } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 
 export default function AdminSettingsPage() {
@@ -12,7 +12,15 @@ export default function AdminSettingsPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [heroImage, setHeroImage] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("https://www.facebook.com/Broadalbinfire");
+  const [emailRouting, setEmailRouting] = useState({
+    general: "",
+    contact: "",
+    volunteer: "",
+    donation: "",
+    registration: "",
+  });
   const [weatherStatus, setWeatherStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [emailStatus, setEmailStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [heroStatus, setHeroStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fbStatus, setFbStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loading, setLoading] = useState(true);
@@ -20,10 +28,11 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const [weatherDoc, heroDoc, fbDoc] = await Promise.all([
+        const [weatherDoc, heroDoc, fbDoc, emailDoc] = await Promise.all([
           getDoc(doc(getDb(), "settings", "weather")),
           getDoc(doc(getDb(), "settings", "hero")),
           getDoc(doc(getDb(), "settings", "facebook")),
+          getDoc(doc(getDb(), "settings", "emailRouting")),
         ]);
         if (weatherDoc.exists()) {
           const data = weatherDoc.data();
@@ -35,6 +44,16 @@ export default function AdminSettingsPage() {
         }
         if (fbDoc.exists()) {
           setFacebookUrl(fbDoc.data().pageUrl || "https://www.facebook.com/Broadalbinfire");
+        }
+        if (emailDoc.exists()) {
+          const data = emailDoc.data();
+          setEmailRouting({
+            general: data.general || "",
+            contact: data.contact || "",
+            volunteer: data.volunteer || "",
+            donation: data.donation || "",
+            registration: data.registration || "",
+          });
         }
       } catch {
         // Use defaults
@@ -94,6 +113,24 @@ export default function AdminSettingsPage() {
     } catch {
       setFbStatus("error");
     }
+  };
+
+  const handleEmailSave = async () => {
+    setEmailStatus("saving");
+    try {
+      await setDoc(doc(getDb(), "settings", "emailRouting"), {
+        ...emailRouting,
+        updatedAt: new Date().toISOString(),
+      });
+      setEmailStatus("saved");
+      setTimeout(() => setEmailStatus("idle"), 2000);
+    } catch {
+      setEmailStatus("error");
+    }
+  };
+
+  const updateEmailRoute = (key: string, value: string) => {
+    setEmailRouting((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleHeroSave = async () => {
@@ -156,6 +193,59 @@ export default function AdminSettingsPage() {
             </button>
 
             {heroStatus === "error" && (
+              <p className="text-red-400 text-sm">Failed to save.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Email Routing */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+            <Mail size={18} className="text-blue-400" />
+            Email Notifications
+          </h2>
+          <p className="text-gray-400 text-sm mb-4">
+            Configure which email address receives notifications for each type.
+            Leave blank to use the default (General) address.
+          </p>
+
+          <div className="space-y-3">
+            {[
+              { key: "general", label: "General / Default", placeholder: "Contact@BroadalbinFire.com" },
+              { key: "contact", label: "Contact Form Submissions", placeholder: "Same as General if blank" },
+              { key: "volunteer", label: "Volunteer Applications", placeholder: "Same as General if blank" },
+              { key: "donation", label: "Donations", placeholder: "Same as General if blank" },
+              { key: "registration", label: "Event Registrations", placeholder: "Same as General if blank" },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                <input
+                  type="email"
+                  value={(emailRouting as Record<string, string>)[key] || ""}
+                  onChange={(e) => updateEmailRoute(key, e.target.value)}
+                  placeholder={placeholder}
+                  className={inputClass}
+                />
+              </div>
+            ))}
+
+            <button
+              onClick={handleEmailSave}
+              disabled={emailStatus === "saving"}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+            >
+              {emailStatus === "saving" ? (
+                "Saving..."
+              ) : emailStatus === "saved" ? (
+                <>
+                  <Check size={16} /> Saved
+                </>
+              ) : (
+                "Save Email Settings"
+              )}
+            </button>
+
+            {emailStatus === "error" && (
               <p className="text-red-400 text-sm">Failed to save.</p>
             )}
           </div>

@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
               `<h2>New Donation Received</h2>
               <p><strong>Name:</strong> ${don.name}</p>
               <p><strong>Email:</strong> ${don.email}</p>
-              <p><strong>Amount:</strong> $${don.amount.toFixed(2)}</p>`
+              <p><strong>Amount:</strong> $${don.amount.toFixed(2)}</p>`,
+              "donation"
             );
           } catch {
             console.error("Failed to send donation emails");
@@ -103,7 +104,8 @@ export async function POST(req: NextRequest) {
               <p><strong>Name:</strong> ${reg.name}</p>
               <p><strong>Email:</strong> ${reg.email}</p>
               <p><strong>Event:</strong> ${reg.eventTitle}</p>
-              <p><strong>Total:</strong> $${reg.total.toFixed(2)}</p>`
+              <p><strong>Total:</strong> $${reg.total.toFixed(2)}</p>`,
+              "registration"
             );
           } catch {
             console.error("Failed to send admin notification");

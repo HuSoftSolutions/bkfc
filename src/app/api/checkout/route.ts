@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
           <p><strong>Name:</strong> ${name}</p>
           <p><strong>Email:</strong> ${email}</p>
           <p><strong>Event:</strong> ${eventTitle}</p>
-          <p><strong>Total Due:</strong> $${total.toFixed(2)}</p>`
+          <p><strong>Total Due:</strong> $${total.toFixed(2)}</p>`,
+          "registration"
         );
       } catch {
         console.error("Failed to send registration emails");

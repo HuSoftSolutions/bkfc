@@ -8,6 +8,7 @@ import Hero from "@/components/Hero";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { sortPinned } from "@/lib/sortPinned";
 import PlaceholderImage from "@/components/PlaceholderImage";
 
 const PER_PAGE = 9;
@@ -36,8 +37,9 @@ export default function NewsPage() {
     fetchNews();
   }, []);
 
-  const totalPages = Math.ceil(articles.length / PER_PAGE);
-  const paginated = articles.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const sorted = sortPinned(articles);
+  const totalPages = Math.ceil(sorted.length / PER_PAGE);
+  const paginated = sorted.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <>

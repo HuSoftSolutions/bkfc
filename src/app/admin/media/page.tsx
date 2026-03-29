@@ -11,6 +11,9 @@ import {
 import { getAppStorage } from "@/lib/firebase";
 import Image from "next/image";
 import { Upload, Trash2, Copy, Check, ImageIcon } from "lucide-react";
+import AdminPagination from "@/components/AdminPagination";
+
+const PER_PAGE = 15;
 
 interface MediaItem {
   url: string;
@@ -28,6 +31,7 @@ export default function AdminMediaPage() {
   const [filter, setFilter] = useState<string>("all");
   const [copied, setCopied] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
 
   const fetchMedia = useCallback(async () => {
     setLoading(true);
@@ -60,6 +64,7 @@ export default function AdminMediaPage() {
 
       allItems.sort((a, b) => b.name.localeCompare(a.name));
       setItems(allItems);
+      setPage(1);
     } catch (err) {
       console.error("Error loading media:", err);
     } finally {
@@ -121,6 +126,9 @@ export default function AdminMediaPage() {
   const filteredItems =
     filter === "all" ? items : items.filter((i) => i.folder === filter);
 
+  const totalPages = Math.ceil(filteredItems.length / PER_PAGE);
+  const paginatedItems = filteredItems.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
   const folderCounts = items.reduce<Record<string, number>>((acc, item) => {
     acc[item.folder] = (acc[item.folder] || 0) + 1;
     return acc;
@@ -162,7 +170,7 @@ export default function AdminMediaPage() {
       {/* Filter tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
-          onClick={() => setFilter("all")}
+          onClick={() => { setFilter("all"); setPage(1); }}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
             filter === "all"
               ? "bg-red-600/20 text-red-400"
@@ -177,7 +185,7 @@ export default function AdminMediaPage() {
           return (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); setPage(1); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
                 filter === f
                   ? "bg-red-600/20 text-red-400"
@@ -207,7 +215,7 @@ export default function AdminMediaPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {filteredItems.map((item) => {
+          {paginatedItems.map((item) => {
             const isSelected = selected.has(item.path);
             return (
               <div
@@ -274,6 +282,7 @@ export default function AdminMediaPage() {
           })}
         </div>
       )}
+      <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

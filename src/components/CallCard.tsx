@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Call } from "@/types";
-import { MapPin, ArrowUpRight } from "lucide-react";
+import { MapPin, ArrowUpRight, Pin } from "lucide-react";
 import PlaceholderImage from "@/components/PlaceholderImage";
 
 interface CallCardProps {
@@ -32,6 +32,11 @@ export default function CallCard({ call }: CallCardProps) {
             {call.date} {!call.image && call.time ? `\u00B7 ${call.time}` : ""}
           </span>
         </div>
+        {call.pinned && (
+          <div className="absolute top-3 right-3 bg-yellow-500 rounded-full p-1 shadow">
+            <Pin size={12} className="text-white rotate-45" />
+          </div>
+        )}
       </div>
       <div className="p-5">
         <h3 className="text-gray-900 font-bold text-lg mb-2 group-hover:text-red-700 transition-colors leading-snug">
@@ -44,7 +49,7 @@ export default function CallCard({ call }: CallCardProps) {
           </div>
         )}
         <p className="text-gray-500 text-sm leading-relaxed">{truncated}</p>
-        <div className="mt-4 flex items-center gap-1 text-red-600 text-sm font-medium">
+        <div className="mt-4 flex items-center gap-1 text-red-600 text-sm font-medium whitespace-nowrap">
           Read More <ArrowUpRight size={14} />
         </div>
       </div>
