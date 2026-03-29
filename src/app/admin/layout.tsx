@@ -32,6 +32,7 @@ const ADMIN_NAV = [
   { href: "/admin/registrations", label: "Registrations", icon: Ticket },
   { href: "/admin/donations", label: "Donations", icon: Heart },
   { href: "/admin/volunteers", label: "Volunteers", icon: UserPlus },
+  { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
   { href: "/admin/media", label: "Media", icon: ImageIcon },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
