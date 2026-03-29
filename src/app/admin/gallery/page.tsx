@@ -11,19 +11,17 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import { ref, listAll, getDownloadURL } from "firebase/storage";
+import { ref, listAll, getDownloadURL, uploadBytes } from "firebase/storage";
 import { getDb, getAppStorage } from "@/lib/firebase";
 import { GalleryImage } from "@/types";
 import Image from "next/image";
 import {
-  Plus,
   Trash2,
   ImageIcon,
   Check,
   Upload,
   X,
 } from "lucide-react";
-import MediaPicker from "@/components/MediaPicker";
 import AdminPagination from "@/components/AdminPagination";
 
 const PER_PAGE = 20;
@@ -31,8 +29,9 @@ const PER_PAGE = 20;
 export default function AdminGalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [page, setPage] = useState(1);
-  const [showPicker, setShowPicker] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [storageImages, setStorageImages] = useState<
     { url: string; path: string; name: string }[]
   >([]);
@@ -103,14 +102,37 @@ export default function AdminGalleryPage() {
     }
   };
 
-  const handleAddSingle = async (url: string) => {
-    await addDoc(collection(getDb(), "gallery"), {
-      url,
-      caption: "",
-      order: images.length,
-      createdAt: new Date().toISOString(),
-    });
-    setShowPicker(false);
+  const handleBulkUpload = async (files: FileList) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    setUploading(true);
+    setUploadProgress(`0 / ${fileArray.length}`);
+
+    const storage = getAppStorage();
+    let completed = 0;
+
+    await Promise.all(
+      fileArray.map(async (file) => {
+        const storageRef = ref(
+          storage,
+          `uploads/${Date.now()}_${Math.random().toString(36).slice(2)}_${file.name}`
+        );
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        await addDoc(collection(getDb(), "gallery"), {
+          url,
+          caption: "",
+          order: images.length + completed,
+          createdAt: new Date().toISOString(),
+        });
+        completed++;
+        setUploadProgress(`${completed} / ${fileArray.length}`);
+      })
+    );
+
+    setUploading(false);
+    setUploadProgress("");
     fetchGallery();
   };
 
@@ -170,12 +192,20 @@ export default function AdminGalleryPage() {
           >
             <ImageIcon size={16} /> Add from Media
           </button>
-          <button
-            onClick={() => setShowPicker(true)}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={16} /> Upload New
-          </button>
+          <label className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+            <Upload size={16} />
+            {uploading ? uploadProgress : "Upload Photos"}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                if (e.target.files) handleBulkUpload(e.target.files);
+              }}
+            />
+          </label>
         </div>
       </div>
 
@@ -183,28 +213,6 @@ export default function AdminGalleryPage() {
         {images.length} photo{images.length !== 1 ? "s" : ""} in gallery.
         Click caption to edit.
       </p>
-
-      {/* Upload new via MediaPicker */}
-      {showPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white">Add Photo</h2>
-              <button
-                onClick={() => setShowPicker(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <MediaPicker
-              value=""
-              onSelect={handleAddSingle}
-              folder="uploads"
-            />
-          </div>
-        </div>
-      )}
 
       {/* Bulk add from existing media */}
       {showBulk && (
