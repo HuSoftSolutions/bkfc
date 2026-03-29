@@ -44,6 +44,11 @@ html {
   background: #9ca3af;
 }
 
+/* Hide reCAPTCHA badge — attribution in footer per Google's terms */
+.grecaptcha-badge {
+  visibility: hidden !important;
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;

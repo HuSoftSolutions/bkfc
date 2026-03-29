@@ -145,10 +145,18 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-6 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-          <p>
-            &copy; {new Date().getFullYear()} Broadalbin-Kennyetto Fire
-            Company. All rights reserved.
-          </p>
+          <div>
+            <p>
+              &copy; {new Date().getFullYear()} Broadalbin-Kennyetto Fire
+              Company. All rights reserved.
+            </p>
+            <p className="mt-1 text-gray-700">
+              Protected by reCAPTCHA. Google{" "}
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">Privacy</a>
+              {" & "}
+              <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">Terms</a>.
+            </p>
+          </div>
           <Link
             href="/admin/login"
             className="hover:text-gray-400 transition-colors"
