@@ -18,6 +18,7 @@ import {
   ImageIcon,
   CalendarDays,
   Ticket,
+  Heart,
 } from "lucide-react";
 
 const ADMIN_NAV = [
@@ -29,6 +30,7 @@ const ADMIN_NAV = [
   { href: "/admin/messages", label: "Messages", icon: Mail },
   { href: "/admin/events", label: "Events", icon: CalendarDays },
   { href: "/admin/registrations", label: "Registrations", icon: Ticket },
+  { href: "/admin/donations", label: "Donations", icon: Heart },
   { href: "/admin/volunteers", label: "Volunteers", icon: UserPlus },
   { href: "/admin/media", label: "Media", icon: ImageIcon },
   { href: "/admin/settings", label: "Settings", icon: Settings },
