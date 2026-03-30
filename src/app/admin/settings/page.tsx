@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { geocodeZip } from "@/lib/weather";
-import { Settings, Check, Mail } from "lucide-react";
+import { Settings, Check, Mail, Bell } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 
 export default function AdminSettingsPage() {
@@ -13,6 +13,14 @@ export default function AdminSettingsPage() {
   const [heroImage, setHeroImage] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("https://www.facebook.com/Broadalbinfire");
   const [publicEmail, setPublicEmail] = useState("");
+  const [notice, setNotice] = useState({
+    active: false,
+    title: "",
+    description: "",
+    image: "",
+    linkUrl: "",
+    linkText: "",
+  });
   const [emailRouting, setEmailRouting] = useState({
     general: "",
     contact: "",
@@ -25,17 +33,19 @@ export default function AdminSettingsPage() {
   const [heroStatus, setHeroStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [contactStatus, setContactStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fbStatus, setFbStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [noticeStatus, setNoticeStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const [weatherDoc, heroDoc, fbDoc, emailDoc, contactDoc] = await Promise.all([
+        const [weatherDoc, heroDoc, fbDoc, emailDoc, contactDoc, noticeDoc] = await Promise.all([
           getDoc(doc(getDb(), "settings", "weather")),
           getDoc(doc(getDb(), "settings", "hero")),
           getDoc(doc(getDb(), "settings", "facebook")),
           getDoc(doc(getDb(), "settings", "emailRouting")),
           getDoc(doc(getDb(), "settings", "contact")),
+          getDoc(doc(getDb(), "settings", "notice")),
         ]);
         if (weatherDoc.exists()) {
           const data = weatherDoc.data();
@@ -50,6 +60,17 @@ export default function AdminSettingsPage() {
         }
         if (contactDoc.exists()) {
           setPublicEmail(contactDoc.data().email || "");
+        }
+        if (noticeDoc.exists()) {
+          const nd = noticeDoc.data();
+          setNotice({
+            active: nd.active || false,
+            title: nd.title || "",
+            description: nd.description || "",
+            image: nd.image || "",
+            linkUrl: nd.linkUrl || "",
+            linkText: nd.linkText || "",
+          });
         }
         if (emailDoc.exists()) {
           const data = emailDoc.data();
@@ -139,6 +160,24 @@ export default function AdminSettingsPage() {
     setEmailRouting((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleNoticeSave = async () => {
+    setNoticeStatus("saving");
+    try {
+      await setDoc(doc(getDb(), "settings", "notice"), {
+        ...notice,
+        updatedAt: new Date().toISOString(),
+      });
+      setNoticeStatus("saved");
+      setTimeout(() => setNoticeStatus("idle"), 2000);
+    } catch {
+      setNoticeStatus("error");
+    }
+  };
+
+  const updateNotice = (key: string, value: string | boolean) => {
+    setNotice((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handleContactSave = async () => {
     setContactStatus("saving");
     try {
@@ -182,6 +221,101 @@ export default function AdminSettingsPage() {
       </h1>
 
       <div className="max-w-lg space-y-6">
+        {/* Site Notice */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+            <Bell size={18} className="text-yellow-400" />
+            Site Notice Popup
+          </h2>
+          <p className="text-gray-400 text-sm mb-4">
+            Show a popup notice to visitors when they first load the site.
+            Dismissed once per session.
+          </p>
+
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notice.active}
+                onChange={(e) => updateNotice("active", e.target.checked)}
+                className="rounded"
+              />
+              Active — show notice to visitors
+            </label>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Title *</label>
+              <input
+                value={notice.title}
+                onChange={(e) => updateNotice("title", e.target.value)}
+                placeholder="e.g. Burn Ban in Effect"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Description</label>
+              <textarea
+                rows={3}
+                value={notice.description}
+                onChange={(e) => updateNotice("description", e.target.value)}
+                placeholder="Details about the notice..."
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Image (optional)</label>
+              <MediaPicker
+                value={notice.image}
+                onSelect={(url) => updateNotice("image", url)}
+                folder="uploads"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Link URL (optional)</label>
+                <input
+                  value={notice.linkUrl}
+                  onChange={(e) => updateNotice("linkUrl", e.target.value)}
+                  placeholder="https://..."
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Link Text</label>
+                <input
+                  value={notice.linkText}
+                  onChange={(e) => updateNotice("linkText", e.target.value)}
+                  placeholder="Learn More"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleNoticeSave}
+              disabled={noticeStatus === "saving"}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+            >
+              {noticeStatus === "saving" ? (
+                "Saving..."
+              ) : noticeStatus === "saved" ? (
+                <>
+                  <Check size={16} /> Saved
+                </>
+              ) : (
+                "Save Notice"
+              )}
+            </button>
+
+            {noticeStatus === "error" && (
+              <p className="text-red-400 text-sm">Failed to save.</p>
+            )}
+          </div>
+        </div>
+
         {/* Hero Image */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-2">Hero Image</h2>

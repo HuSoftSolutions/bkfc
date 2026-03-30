@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RecaptchaProvider from "@/components/RecaptchaProvider";
+import SiteNoticeModal from "@/components/SiteNoticeModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />
+          <SiteNoticeModal />
         </RecaptchaProvider>
       </body>
     </html>
