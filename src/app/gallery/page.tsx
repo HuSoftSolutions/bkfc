@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   collection,
   query,
@@ -44,24 +44,35 @@ export default function GalleryPage() {
     fetchImages();
   }, []);
 
-  // Infinite scroll observer
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const target = entries[0];
-      if (target.isIntersecting && visibleCount < images.length) {
-        setVisibleCount((prev) => Math.min(prev + PER_PAGE, images.length));
-      }
-    },
-    [visibleCount, images.length]
-  );
-
+  // Infinite scroll observer — debounced to prevent cascade
   useEffect(() => {
-    const observer = new IntersectionObserver(handleObserver, {
-      rootMargin: "200px",
-    });
-    if (loaderRef.current) observer.observe(loaderRef.current);
-    return () => observer.disconnect();
-  }, [handleObserver]);
+    const el = loaderRef.current;
+    if (!el) return;
+
+    let timeout: NodeJS.Timeout | null = null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          // Debounce to prevent rapid-fire loading
+          if (timeout) clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            setVisibleCount((prev) => {
+              if (prev >= images.length) return prev;
+              return Math.min(prev + PER_PAGE, images.length);
+            });
+          }, 300);
+        }
+      },
+      { rootMargin: "100px" }
+    );
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [images.length]);
 
   // Lock body scroll when lightbox open
   useEffect(() => {
