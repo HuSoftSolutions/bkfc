@@ -6,6 +6,15 @@ import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import Link from "next/link";
 import { Heart, CheckCircle } from "lucide-react";
+import PrintReceipt from "@/components/PrintReceipt";
+
+interface DonationData {
+  amount: number;
+  name: string;
+  email: string;
+  createdAt: string;
+  paymentStatus: string;
+}
 
 export default function ThankYouPage() {
   return (
@@ -24,7 +33,7 @@ export default function ThankYouPage() {
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const donationId = searchParams.get("donation");
-  const [amount, setAmount] = useState<number | null>(null);
+  const [donation, setDonation] = useState<DonationData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,7 +45,7 @@ function ThankYouContent() {
       try {
         const snap = await getDoc(doc(getDb(), "donations", donationId));
         if (snap.exists()) {
-          setAmount(snap.data().amount);
+          setDonation(snap.data() as DonationData);
         }
       } catch {
         // ok
@@ -69,7 +78,7 @@ function ThankYouContent() {
       </h1>
       <p className="text-gray-500 mb-2">
         Your generous donation
-        {amount ? ` of $${amount.toFixed(2)}` : ""} to the
+        {donation ? ` of $${donation.amount.toFixed(2)}` : ""} to the
         Broadalbin-Kennyetto Fire Company has been received.
       </p>
       <p className="text-gray-400 text-sm mb-8">
@@ -84,6 +93,20 @@ function ThankYouContent() {
           grateful for your generosity.
         </p>
       </div>
+
+      {donation && donationId && (
+        <div className="mb-6">
+          <PrintReceipt
+            type="donation"
+            receiptId={donationId}
+            date={donation.createdAt}
+            name={donation.name}
+            email={donation.email}
+            total={donation.amount}
+            paymentStatus={donation.paymentStatus}
+          />
+        </div>
+      )}
 
       <Link
         href="/"

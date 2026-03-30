@@ -1,32 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { EventRegistration } from "@/types";
 import Link from "next/link";
 import { CheckCircle, Calendar, Mail } from "lucide-react";
+import PrintReceipt from "@/components/PrintReceipt";
 
 export default function ConfirmationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-lg mx-auto px-4 py-20 text-center text-gray-400">
+          Loading...
+        </div>
+      }
+    >
+      <ConfirmationContent />
+    </Suspense>
+  );
+}
+
+function ConfirmationContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const eventId = params.id as string;
   const registrationId = searchParams.get("registration");
 
-  const [registration, setRegistration] = useState<EventRegistration | null>(null);
+  const [registration, setRegistration] = useState<EventRegistration | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetch() {
+    async function fetchReg() {
       if (!registrationId) {
         setLoading(false);
         return;
       }
       try {
-        const snap = await getDoc(doc(getDb(), "registrations", registrationId));
+        const snap = await getDoc(
+          doc(getDb(), "registrations", registrationId)
+        );
         if (snap.exists()) {
-          setRegistration({ id: snap.id, ...snap.data() } as EventRegistration);
+          setRegistration({
+            id: snap.id,
+            ...snap.data(),
+          } as EventRegistration);
         }
       } catch (err) {
         console.error("Error:", err);
@@ -34,7 +56,7 @@ export default function ConfirmationPage() {
         setLoading(false);
       }
     }
-    fetch();
+    fetchReg();
   }, [registrationId]);
 
   if (loading) {
@@ -60,7 +82,10 @@ export default function ConfirmationPage() {
       </h1>
       <p className="text-gray-500 mb-8">
         Thank you for registering
-        {registration?.eventTitle ? ` for ${registration.eventTitle}` : ""}.
+        {registration?.eventTitle
+          ? ` for ${registration.eventTitle}`
+          : ""}
+        .
       </p>
 
       {registration && (
@@ -113,12 +138,28 @@ export default function ConfirmationPage() {
         </div>
       )}
 
-      <Link
-        href={`/events/${eventId}`}
-        className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-medium transition-colors"
-      >
-        &larr; Back to Event
-      </Link>
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        {registration && registrationId && (
+          <PrintReceipt
+            type="registration"
+            receiptId={registrationId}
+            date={registration.createdAt}
+            name={registration.name}
+            email={registration.email}
+            eventTitle={registration.eventTitle}
+            items={registration.items}
+            total={registration.total}
+            paymentMethod={registration.paymentMethod}
+            paymentStatus={registration.paymentStatus}
+          />
+        )}
+        <Link
+          href={`/events/${eventId}`}
+          className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-medium transition-colors"
+        >
+          &larr; Back to Event
+        </Link>
+      </div>
     </div>
   );
 }
