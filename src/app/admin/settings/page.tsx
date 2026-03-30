@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
+import { Event } from "@/types";
 import { geocodeZip } from "@/lib/weather";
 import { Settings, Check, Mail, Bell } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
@@ -18,9 +19,11 @@ export default function AdminSettingsPage() {
     title: "",
     description: "",
     image: "",
+    linkType: "none" as "none" | "page" | "event" | "custom",
     linkUrl: "",
     linkText: "",
   });
+  const [events, setEvents] = useState<Event[]>([]);
   const [emailRouting, setEmailRouting] = useState({
     general: "",
     contact: "",
@@ -68,10 +71,18 @@ export default function AdminSettingsPage() {
             title: nd.title || "",
             description: nd.description || "",
             image: nd.image || "",
+            linkType: nd.linkType || "none",
             linkUrl: nd.linkUrl || "",
             linkText: nd.linkText || "",
           });
         }
+        // Fetch events for notice link picker
+        const eventsSnap = await getDocs(
+          query(collection(getDb(), "events"), orderBy("date", "desc"))
+        );
+        setEvents(
+          eventsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Event[]
+        );
         if (emailDoc.exists()) {
           const data = emailDoc.data();
           setEmailRouting({
@@ -273,9 +284,68 @@ export default function AdminSettingsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Button Link</label>
+              <select
+                value={notice.linkType}
+                onChange={(e) => {
+                  const type = e.target.value as typeof notice.linkType;
+                  updateNotice("linkType", type);
+                  if (type === "none") updateNotice("linkUrl", "");
+                }}
+                className={inputClass}
+              >
+                <option value="none">No button</option>
+                <option value="page">Link to site page</option>
+                <option value="event">Link to an event</option>
+                <option value="custom">Custom URL</option>
+              </select>
+            </div>
+
+            {notice.linkType === "page" && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Link URL (optional)</label>
+                <label className="block text-xs text-gray-400 mb-1">Select Page</label>
+                <select
+                  value={notice.linkUrl}
+                  onChange={(e) => updateNotice("linkUrl", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Choose a page...</option>
+                  <option value="/">Home</option>
+                  <option value="/about">About</option>
+                  <option value="/apparatus">Apparatus</option>
+                  <option value="/calls">Calls</option>
+                  <option value="/news">News</option>
+                  <option value="/events">Events</option>
+                  <option value="/gallery">Gallery</option>
+                  <option value="/volunteer">Volunteer</option>
+                  <option value="/donate">Donate</option>
+                  <option value="/contact">Contact</option>
+                </select>
+              </div>
+            )}
+
+            {notice.linkType === "event" && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Select Event</label>
+                <select
+                  value={notice.linkUrl}
+                  onChange={(e) => updateNotice("linkUrl", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Choose an event...</option>
+                  {events.map((evt) => (
+                    <option key={evt.id} value={`/events/${evt.id}`}>
+                      {evt.title} ({evt.date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {notice.linkType === "custom" && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Custom URL</label>
                 <input
                   value={notice.linkUrl}
                   onChange={(e) => updateNotice("linkUrl", e.target.value)}
@@ -283,8 +353,11 @@ export default function AdminSettingsPage() {
                   className={inputClass}
                 />
               </div>
+            )}
+
+            {notice.linkType !== "none" && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Link Text</label>
+                <label className="block text-xs text-gray-400 mb-1">Button Text</label>
                 <input
                   value={notice.linkText}
                   onChange={(e) => updateNotice("linkText", e.target.value)}
@@ -292,7 +365,7 @@ export default function AdminSettingsPage() {
                   className={inputClass}
                 />
               </div>
-            </div>
+            )}
 
             <button
               onClick={handleNoticeSave}

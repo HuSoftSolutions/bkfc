@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 
 interface NoticeData {
@@ -15,6 +16,7 @@ interface NoticeData {
 }
 
 export default function SiteNoticeModal() {
+  const router = useRouter();
   const [notice, setNotice] = useState<NoticeData | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -87,12 +89,20 @@ export default function SiteNoticeModal() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
             {notice.linkUrl && (
-              <a
-                href={notice.linkUrl}
+              <button
+                onClick={() => {
+                  handleDismiss();
+                  const url = notice.linkUrl!;
+                  if (url.startsWith("/")) {
+                    router.push(url);
+                  } else {
+                    window.open(url, "_blank");
+                  }
+                }}
                 className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors whitespace-nowrap"
               >
                 {notice.linkText || "Learn More"}
-              </a>
+              </button>
             )}
             <button
               onClick={handleDismiss}
