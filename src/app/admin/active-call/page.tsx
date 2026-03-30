@@ -9,9 +9,13 @@ import {
   orderBy,
   limit,
   getDocs,
+  where,
+  updateDoc,
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { Siren, XCircle, Send, Clock, MapPin, FileText } from "lucide-react";
+import { Call } from "@/types";
+import Link from "next/link";
+import { Siren, XCircle, Send, Clock, MapPin, FileText, Eye, Pencil } from "lucide-react";
 
 interface ActiveCall {
   active: boolean;
@@ -33,6 +37,7 @@ interface IarLog {
 export default function AdminActiveCallPage() {
   const [call, setCall] = useState<ActiveCall | null>(null);
   const [logs, setLogs] = useState<IarLog[]>([]);
+  const [pendingCalls, setPendingCalls] = useState<Call[]>([]);
   const [testForm, setTestForm] = useState({
     callType: "",
     address: "",
@@ -53,24 +58,21 @@ export default function AdminActiveCallPage() {
     return () => unsubscribe();
   }, []);
 
-  // Fetch recent logs
+  // Fetch recent logs and pending calls
   useEffect(() => {
-    async function fetchLogs() {
+    async function fetchData() {
       try {
-        const q = query(
-          collection(getDb(), "iarLogs"),
-          orderBy("createdAt", "desc"),
-          limit(20)
-        );
-        const snap = await getDocs(q);
-        setLogs(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() })) as IarLog[]
-        );
+        const [logsSnap, pendingSnap] = await Promise.all([
+          getDocs(query(collection(getDb(), "iarLogs"), orderBy("createdAt", "desc"), limit(20))),
+          getDocs(query(collection(getDb(), "calls"), where("source", "==", "iar"), orderBy("date", "desc"), limit(20))),
+        ]);
+        setLogs(logsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as IarLog[]);
+        setPendingCalls(pendingSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Call[]);
       } catch {
         // ok
       }
     }
-    fetchLogs();
+    fetchData();
   }, [call]);
 
   const handleClear = async () => {
@@ -255,6 +257,82 @@ export default function AdminActiveCallPage() {
               {sending ? "Sending..." : "Trigger Test Call"}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Pending / recent IAR calls */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-semibold">IAR Calls</h3>
+          <Link
+            href="/admin/call-config"
+            className="text-red-400 hover:text-red-300 text-sm font-medium"
+          >
+            Configure Dispatch Settings
+          </Link>
+        </div>
+        <div className="space-y-2">
+          {pendingCalls.map((c) => {
+            const now = new Date().toISOString();
+            const isPending = c.releaseAt && c.releaseAt > now;
+            return (
+              <div
+                key={c.id}
+                className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${
+                      isPending
+                        ? "bg-yellow-900/50 text-yellow-400"
+                        : "bg-green-900/50 text-green-400"
+                    }`}
+                  >
+                    {isPending ? "Pending" : "Published"}
+                  </span>
+                  <div>
+                    <p className="text-white font-medium text-sm">{c.title}</p>
+                    <p className="text-gray-500 text-xs">
+                      {c.date} {c.time && `• ${c.time}`} {c.location && `• ${c.location}`}
+                      {isPending && c.releaseAt && (
+                        <span className="text-yellow-400 ml-2">
+                          Releases {new Date(c.releaseAt).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isPending && (
+                    <button
+                      onClick={async () => {
+                        await updateDoc(doc(getDb(), "calls", c.id), {
+                          releaseAt: new Date().toISOString(),
+                        });
+                        // Refresh
+                        const snap = await getDocs(query(collection(getDb(), "calls"), where("source", "==", "iar"), orderBy("date", "desc"), limit(20)));
+                        setPendingCalls(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Call[]);
+                      }}
+                      className="flex items-center gap-1 bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Eye size={12} /> Publish Now
+                    </button>
+                  )}
+                  <Link
+                    href={`/admin/calls`}
+                    className="text-gray-400 hover:text-white p-1"
+                  >
+                    <Pencil size={14} />
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+          {pendingCalls.length === 0 && (
+            <p className="text-gray-500 text-sm text-center py-4">
+              No IAR calls received yet.
+            </p>
+          )}
         </div>
       </div>
 

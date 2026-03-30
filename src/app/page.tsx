@@ -17,6 +17,7 @@ import MapSection from "@/components/MapSection";
 import FacebookFeed from "@/components/FacebookFeed";
 import PlaceholderImage from "@/components/PlaceholderImage";
 import { sortPinned } from "@/lib/sortPinned";
+import { filterPublicCalls } from "@/lib/filterCalls";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -48,8 +49,9 @@ export default function HomePage() {
           orderBy("date", "desc")
         );
         const snapshot = await getDocs(q);
-        const all = sortPinned(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[]);
-        setCalls(all.slice(0, 6));
+        const allCalls = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[];
+        const publicCalls = filterPublicCalls(allCalls);
+        setCalls(sortPinned(publicCalls).slice(0, 6));
       } catch (err) {
         console.error("Error fetching calls:", err);
       } finally {

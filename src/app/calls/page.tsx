@@ -9,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MapPin, ArrowUpRight, ChevronLeft, ChevronRight, Pin } from "lucide-react";
 import { sortPinned } from "@/lib/sortPinned";
+import { filterPublicCalls } from "@/lib/filterCalls";
 import PlaceholderImage from "@/components/PlaceholderImage";
 
 const PER_PAGE = 9;
@@ -23,7 +24,8 @@ export default function CallsPage() {
       try {
         const q = query(collection(getDb(), "calls"), orderBy("date", "desc"));
         const snapshot = await getDocs(q);
-        setCalls(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[]);
+        const allCalls = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[];
+        setCalls(filterPublicCalls(allCalls));
       } catch (err) {
         console.error("Error fetching calls:", err);
       } finally {

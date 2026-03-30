@@ -25,6 +25,7 @@ import {
 const ADMIN_NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/active-call", label: "Live Status", icon: Radio },
+  { href: "/admin/call-config", label: "Dispatch Config", icon: Settings },
   { href: "/admin/calls", label: "Calls", icon: Siren },
   { href: "/admin/news", label: "News", icon: Newspaper },
   { href: "/admin/apparatus", label: "Apparatus", icon: Truck },

@@ -17,6 +17,11 @@ export interface Call {
   images?: string[];
   slug: string;
   pinned?: boolean;
+  // Delayed disclosure fields
+  status?: "pending" | "published";
+  releaseAt?: string;
+  source?: "manual" | "iar";
+  rawPayload?: string;
 }
 
 export interface Officer {

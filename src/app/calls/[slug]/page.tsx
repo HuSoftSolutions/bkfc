@@ -30,14 +30,20 @@ export default function CallDetailPage() {
           where("slug", "==", slug)
         );
         const snapshot = await getDocs(q);
+        const now = new Date().toISOString();
         if (snapshot.size > 0) {
           const d = snapshot.docs[0];
-          setCall({ id: d.id, ...d.data() } as Call);
+          const data = { id: d.id, ...d.data() } as Call;
+          // Gate pending calls
+          if (data.releaseAt && data.releaseAt > now) { setCall(null); }
+          else { setCall(data); }
         } else {
           // Fallback: try by document ID
           const docSnap = await getDoc(doc(getDb(), "calls", slug));
           if (docSnap.exists()) {
-            setCall({ id: docSnap.id, ...docSnap.data() } as Call);
+            const data = { id: docSnap.id, ...docSnap.data() } as Call;
+            if (data.releaseAt && data.releaseAt > now) { setCall(null); }
+            else { setCall(data); }
           }
         }
       } catch (err) {
