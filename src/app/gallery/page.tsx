@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   collection,
   query,
@@ -10,16 +10,15 @@ import {
 import { getDb } from "@/lib/firebase";
 import { GalleryImage } from "@/types";
 import Hero from "@/components/Hero";
-import { X } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 
-const PER_PAGE = 12;
+const PER_PAGE = 24;
 
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PER_PAGE);
   const [lightbox, setLightbox] = useState<GalleryImage | null>(null);
-  const loaderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchImages() {
@@ -44,36 +43,6 @@ export default function GalleryPage() {
     fetchImages();
   }, []);
 
-  // Infinite scroll observer — debounced to prevent cascade
-  useEffect(() => {
-    const el = loaderRef.current;
-    if (!el) return;
-
-    let timeout: NodeJS.Timeout | null = null;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          // Debounce to prevent rapid-fire loading
-          if (timeout) clearTimeout(timeout);
-          timeout = setTimeout(() => {
-            setVisibleCount((prev) => {
-              if (prev >= images.length) return prev;
-              return Math.min(prev + PER_PAGE, images.length);
-            });
-          }, 300);
-        }
-      },
-      { rootMargin: "100px" }
-    );
-
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [images.length]);
-
   // Lock body scroll when lightbox open
   useEffect(() => {
     if (lightbox) {
@@ -87,6 +56,7 @@ export default function GalleryPage() {
   }, [lightbox]);
 
   const visible = images.slice(0, visibleCount);
+  const hasMore = visibleCount < images.length;
 
   return (
     <>
@@ -94,12 +64,11 @@ export default function GalleryPage() {
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         {loading ? (
-          <div className="columns-2 sm:columns-3 lg:columns-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
-                className="bg-gray-100 rounded-xl mb-4 animate-pulse"
-                style={{ height: `${200 + (i % 3) * 80}px` }}
+                className="bg-gray-100 rounded-xl animate-pulse aspect-square"
               />
             ))}
           </div>
@@ -109,42 +78,49 @@ export default function GalleryPage() {
           </p>
         ) : (
           <>
-            {/* Masonry layout using CSS columns */}
-            <div className="columns-2 sm:columns-3 lg:columns-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {visible.map((img) => (
                 <button
                   key={img.id}
                   onClick={() => setLightbox(img)}
-                  className="block w-full mb-4 break-inside-avoid group cursor-pointer"
+                  className="relative rounded-xl overflow-hidden bg-gray-100 group cursor-pointer aspect-square"
                 >
-                  <div className="relative rounded-xl overflow-hidden bg-gray-100">
-                    <img
-                      src={img.url}
-                      alt={img.caption || "Gallery photo"}
-                      className="w-full h-auto block"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-                    {img.caption && (
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <p className="text-white text-sm">{img.caption}</p>
-                      </div>
-                    )}
-                  </div>
+                  <img
+                    src={img.url}
+                    alt={img.caption || "Gallery photo"}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                  {img.caption && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <p className="text-white text-sm">{img.caption}</p>
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
 
-            {/* Infinite scroll trigger */}
-            {visibleCount < images.length && (
-              <div ref={loaderRef} className="flex justify-center py-8">
-                <div className="w-8 h-8 border-2 border-gray-300 border-t-red-600 rounded-full animate-spin" />
+            {/* Load more button */}
+            {hasMore && (
+              <div className="flex justify-center pt-10">
+                <button
+                  onClick={() =>
+                    setVisibleCount((prev) =>
+                      Math.min(prev + PER_PAGE, images.length)
+                    )
+                  }
+                  className="flex items-center gap-2 bg-white border border-gray-200 hover:border-red-300 text-gray-700 font-medium px-8 py-3 rounded-xl transition-colors"
+                >
+                  <ChevronDown size={18} />
+                  Load More ({images.length - visibleCount} remaining)
+                </button>
               </div>
             )}
 
-            {visibleCount >= images.length && images.length > PER_PAGE && (
-              <p className="text-gray-400 text-sm text-center py-8">
-                All {images.length} photos loaded
+            {!hasMore && images.length > PER_PAGE && (
+              <p className="text-gray-400 text-sm text-center pt-10">
+                All {images.length} photos
               </p>
             )}
           </>
