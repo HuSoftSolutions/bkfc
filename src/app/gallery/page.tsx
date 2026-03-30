@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   collection,
   query,
@@ -80,24 +80,11 @@ export default function GalleryPage() {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {visible.map((img) => (
-                <button
+                <GalleryTile
                   key={img.id}
+                  image={img}
                   onClick={() => setLightbox(img)}
-                  className="relative rounded-xl overflow-hidden bg-gray-100 group cursor-pointer aspect-square"
-                >
-                  <img
-                    src={img.url}
-                    alt={img.caption || "Gallery photo"}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-                  {img.caption && (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <p className="text-white text-sm">{img.caption}</p>
-                    </div>
-                  )}
-                </button>
+                />
               ))}
             </div>
 
@@ -157,5 +144,44 @@ export default function GalleryPage() {
         </div>
       )}
     </>
+  );
+}
+
+function GalleryTile({
+  image,
+  onClick,
+}: {
+  image: GalleryImage;
+  onClick: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+
+  const handleLoad = useCallback(() => setLoaded(true), []);
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative rounded-xl overflow-hidden bg-gray-100 group cursor-pointer aspect-square"
+    >
+      {/* Skeleton pulse until loaded */}
+      {!loaded && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+      )}
+      <img
+        src={image.url}
+        alt={image.caption || "Gallery photo"}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+        loading="lazy"
+        onLoad={handleLoad}
+      />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+      {image.caption && (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <p className="text-white text-sm">{image.caption}</p>
+        </div>
+      )}
+    </button>
   );
 }
