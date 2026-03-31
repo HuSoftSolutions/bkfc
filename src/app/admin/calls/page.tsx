@@ -6,6 +6,7 @@ import {
   query,
   orderBy,
   getDocs,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -85,6 +86,22 @@ export default function AdminCallsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this call?")) return;
     await deleteDoc(doc(getDb(), "calls", id));
+
+    // Clear active banner if it references this call
+    try {
+      const activeSnap = await getDoc(doc(getDb(), "settings", "activeCall"));
+      if (activeSnap.exists() && activeSnap.data().callId === id) {
+        await updateDoc(doc(getDb(), "settings", "activeCall"), {
+          active: false,
+          bannerText: "",
+          callId: "",
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    } catch {
+      // non-critical
+    }
+
     fetchCalls();
   };
 
