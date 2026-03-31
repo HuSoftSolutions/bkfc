@@ -193,8 +193,8 @@ export default function AdminOfficersPage() {
                 <label className="block text-xs text-gray-400 mb-1">Display Order</label>
                 <input
                   type="number"
-                  value={editing.order || 0}
-                  onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 0 })}
+                  value={editing.order ?? ""}
+                  onChange={(e) => setEditing({ ...editing, order: e.target.value === "" ? "" as unknown as number : parseInt(e.target.value) })}
                   className={inputClass}
                 />
               </div>

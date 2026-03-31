@@ -296,7 +296,7 @@ export default function AdminEventsPage() {
                               type="number"
                               min="0"
                               value={opt.maxQuantity || ""}
-                              onChange={(e) => updateTicketOption(opt.id, "maxQuantity", parseInt(e.target.value) || 0)}
+                              onChange={(e) => updateTicketOption(opt.id, "maxQuantity", e.target.value === "" ? 0 : parseInt(e.target.value))}
                               className={inputClass}
                             />
                           </div>

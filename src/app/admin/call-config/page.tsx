@@ -13,7 +13,7 @@ interface TypeMapping {
 }
 
 export default function CallConfigPage() {
-  const [delayMinutes, setDelayMinutes] = useState(60);
+  const [delayMinutes, setDelayMinutes] = useState("60");
   const [bannerText, setBannerText] = useState("Units Currently Responding");
   const [autoPublish, setAutoPublish] = useState(true);
   const [mappings, setMappings] = useState<TypeMapping[]>([]);
@@ -27,7 +27,7 @@ export default function CallConfigPage() {
         const snap = await getDoc(doc(getDb(), "settings", "callConfig"));
         if (snap.exists()) {
           const data = snap.data();
-          setDelayMinutes(data.delayMinutes ?? 60);
+          setDelayMinutes(String(data.delayMinutes ?? 60));
           setBannerText(data.bannerText || "Units Currently Responding");
           setAutoPublish(data.autoPublish ?? true);
           setDefaultImage(data.typeImageMap?.default || "");
@@ -64,7 +64,7 @@ export default function CallConfigPage() {
       }
 
       await setDoc(doc(getDb(), "settings", "callConfig"), {
-        delayMinutes,
+        delayMinutes: parseInt(delayMinutes) || 60,
         bannerText,
         autoPublish,
         typeImageMap,
@@ -125,7 +125,7 @@ export default function CallConfigPage() {
                 type="number"
                 min={0}
                 value={delayMinutes}
-                onChange={(e) => setDelayMinutes(parseInt(e.target.value) || 0)}
+                onChange={(e) => setDelayMinutes(e.target.value)}
                 className={inputClass}
               />
               <p className="text-gray-500 text-xs mt-1">
