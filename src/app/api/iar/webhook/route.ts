@@ -39,6 +39,65 @@ function findField(obj: Record<string, unknown>, keys: string[]): string {
   return "";
 }
 
+/** Build a human-readable description from IAR structured data */
+function buildDescription(
+  incident: Record<string, unknown>,
+  callType: string,
+  address: string,
+  now: Date
+): string {
+  const parts: string[] = [];
+
+  // Format: "Monday, March 31, 2026 (2:02 pm)"
+  const dateStr = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeStr = now.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  // Opening line
+  const nature = callType || "an incident";
+  if (address) {
+    parts.push(
+      `${dateStr} (${timeStr}) - The Broadalbin-Kennyetto Fire Company was dispatched for ${nature} at ${address}.`
+    );
+  } else {
+    parts.push(
+      `${dateStr} (${timeStr}) - The Broadalbin-Kennyetto Fire Company was dispatched for ${nature}.`
+    );
+  }
+
+  // Units
+  const units = Array.isArray(incident.units)
+    ? incident.units
+        .map((u: Record<string, unknown>) => String(u.id || u.name || ""))
+        .filter(Boolean)
+    : [];
+  if (units.length > 0) {
+    parts.push(`Units responded: ${units.join(", ")}.`);
+  } else {
+    parts.push("Units responded.");
+  }
+
+  // Comments (additional details from dispatch)
+  const comments = Array.isArray(incident.comments)
+    ? incident.comments
+        .map((c: Record<string, unknown>) => String(c.message || ""))
+        .filter((m: string) => m && !m.includes("TEST EVENT") && !m.includes("validation payload"))
+    : [];
+  if (comments.length > 0) {
+    parts.push(comments.join("\n"));
+  }
+
+  return parts.join("\n\n");
+}
+
 /** Try to extract an incident ID from the payload for deduplication */
 function findIncidentId(obj: Record<string, unknown>): string {
   return findField(obj, [
@@ -145,14 +204,8 @@ export async function POST(req: NextRequest) {
       findField(incident, ["Address", "address", "location", "Location", "VerifiedAddress", "IncidentAddress"]) ||
       "";
 
-    // For description: use plainText (IAR's formatted summary), then comments, then generic fallback
-    const plainText = String(incident.plainText || "");
-    const comments = Array.isArray(incident.comments)
-      ? incident.comments.map((c: Record<string, unknown>) => String(c.message || "")).filter(Boolean).join("\n")
-      : "";
-    const message = plainText || comments ||
-      findField(incident, ["MessageBody", "message", "Message", "Body", "body", "Description"]) ||
-      rawText;
+    // Build a clean, human-readable description from IAR structured data
+    const message = buildDescription(incident, callType, address, now);
 
     // Always log the raw payload
     await db.collection("iarLogs").add({
