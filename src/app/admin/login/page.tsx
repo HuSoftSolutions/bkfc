@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { useState, useEffect } from "react";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { getAppAuth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
@@ -11,6 +11,19 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  // If already signed in, redirect to dashboard
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(getAppAuth(), (user) => {
+      if (user) {
+        router.replace("/admin");
+      } else {
+        setChecking(false);
+      }
+    });
+    return unsubscribe;
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +39,14 @@ export default function AdminLoginPage() {
       setLoading(false);
     }
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
