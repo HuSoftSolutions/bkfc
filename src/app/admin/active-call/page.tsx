@@ -31,6 +31,7 @@ interface IarLog {
   callType: string;
   address: string;
   message: string;
+  rawPayload: string;
   createdAt: string;
 }
 
@@ -44,6 +45,7 @@ export default function AdminActiveCallPage() {
     message: "",
   });
   const [sending, setSending] = useState(false);
+  const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
   // Real-time listener
   useEffect(() => {
@@ -359,7 +361,8 @@ export default function AdminActiveCallPage() {
                 {logs.map((log) => (
                   <tr
                     key={log.id}
-                    className="border-b border-gray-800/50 hover:bg-gray-800/30"
+                    className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
+                    onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
                   >
                     <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleString()}
@@ -370,8 +373,20 @@ export default function AdminActiveCallPage() {
                     <td className="px-4 py-3 text-gray-300">
                       {log.address || "—"}
                     </td>
-                    <td className="px-4 py-3 text-gray-400 max-w-xs truncate">
-                      {log.message || "—"}
+                    <td className="px-4 py-3 text-gray-400 max-w-xs">
+                      {expandedLog === log.id ? (
+                        <div>
+                          <p className="mb-2">{log.message || "—"}</p>
+                          <div className="bg-gray-800 rounded p-2 mt-2">
+                            <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-1">Raw Payload</p>
+                            <pre className="text-green-400 text-xs whitespace-pre-wrap break-all font-mono">
+                              {(() => { try { return JSON.stringify(JSON.parse(log.rawPayload), null, 2); } catch { return log.rawPayload || "—"; } })()}
+                            </pre>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="truncate block">{log.message || "—"}</span>
+                      )}
                     </td>
                   </tr>
                 ))}

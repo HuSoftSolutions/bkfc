@@ -3,6 +3,32 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { sendNotificationEmail } from "@/lib/email";
 
 const DEFAULT_DELAY_MINUTES = 60;
+
+/** Search an object for the first matching key (case-sensitive, then case-insensitive) */
+function findField(obj: Record<string, unknown>, keys: string[]): string {
+  // Exact match first
+  for (const key of keys) {
+    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
+      return String(obj[key]);
+    }
+  }
+  // Case-insensitive fallback
+  const objKeys = Object.keys(obj);
+  for (const key of keys) {
+    const found = objKeys.find((k) => k.toLowerCase() === key.toLowerCase());
+    if (found && obj[found] !== undefined && obj[found] !== null && obj[found] !== "") {
+      return String(obj[found]);
+    }
+  }
+  // Search nested objects one level deep
+  for (const val of Object.values(obj)) {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      const nested = findField(val as Record<string, unknown>, keys);
+      if (nested) return nested;
+    }
+  }
+  return "";
+}
 const DEFAULT_BANNER_TEXT = "Units Currently Responding";
 
 export async function POST(req: NextRequest) {
@@ -17,9 +43,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const body = await req.json().catch(() => null);
-    const text = body ? null : await req.text().catch(() => "");
-    const incident = body || { raw: text };
+    // Capture raw body first for logging
+    const rawText = await req.text();
+    let incident: Record<string, unknown> = {};
+    try {
+      incident = JSON.parse(rawText);
+    } catch {
+      incident = { raw: rawText };
+    }
 
     const db = getAdminDb();
     const now = new Date();
@@ -45,10 +76,10 @@ export async function POST(req: NextRequest) {
 
     const releaseAt = new Date(now.getTime() + delayMinutes * 60 * 1000);
 
-    // Extract fields from IAR payload
-    const callType = incident.MessageSubject || incident.callType || incident.type || "";
-    const address = incident.Address || incident.address || incident.location || "";
-    const message = incident.MessageBody || incident.message || incident.raw || "";
+    // Extract fields — try every plausible key (we don't know IAR's exact format yet)
+    const callType = findField(incident, ["MessageSubject", "callType", "type", "call_type", "Type", "Subject", "IncidentType", "incident_type", "Nature", "nature"]) || "";
+    const address = findField(incident, ["Address", "address", "location", "Location", "VerifiedAddress", "verified_address", "IncidentAddress", "incident_address"]) || "";
+    const message = findField(incident, ["MessageBody", "message", "Message", "Body", "body", "Description", "description", "Details", "details", "raw"]) || rawText;
 
     // Find default image for this call type
     const callTypeLower = callType.toLowerCase();
@@ -80,7 +111,7 @@ export async function POST(req: NextRequest) {
       status: autoPublish ? "pending" : "pending",
       releaseAt: releaseAt.toISOString(),
       source: "iar",
-      rawPayload: JSON.stringify(incident),
+      rawPayload: rawText,
     };
 
     const callRef = await db.collection("calls").add(callDoc);
@@ -101,7 +132,7 @@ export async function POST(req: NextRequest) {
       callType,
       address,
       message,
-      rawPayload: JSON.stringify(incident),
+      rawPayload: rawText,
       createdAt: now.toISOString(),
     });
 
