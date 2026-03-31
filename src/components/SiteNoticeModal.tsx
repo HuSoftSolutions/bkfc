@@ -18,10 +18,10 @@ interface NoticeData {
 export default function SiteNoticeModal() {
   const router = useRouter();
   const [notice, setNotice] = useState<NoticeData | null>(null);
+  const [ready, setReady] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Check if already dismissed this session
     if (sessionStorage.getItem("notice-dismissed")) return;
 
     async function loadNotice() {
@@ -30,7 +30,23 @@ export default function SiteNoticeModal() {
         if (snap.exists()) {
           const data = snap.data() as NoticeData;
           if (data.active && data.title) {
-            setNotice(data);
+            // If there's an image, preload it before showing
+            if (data.image) {
+              const img = new Image();
+              img.onload = () => {
+                setNotice(data);
+                setReady(true);
+              };
+              img.onerror = () => {
+                // Show without image if it fails to load
+                setNotice({ ...data, image: undefined });
+                setReady(true);
+              };
+              img.src = data.image;
+            } else {
+              setNotice(data);
+              setReady(true);
+            }
           }
         }
       } catch {
@@ -45,7 +61,7 @@ export default function SiteNoticeModal() {
     sessionStorage.setItem("notice-dismissed", "1");
   };
 
-  if (!notice || dismissed) return null;
+  if (!notice || !ready || dismissed) return null;
 
   return (
     <div
@@ -53,7 +69,7 @@ export default function SiteNoticeModal() {
       onClick={handleDismiss}
     >
       <div
-        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden"
+        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close */}
