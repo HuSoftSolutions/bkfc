@@ -3,16 +3,15 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { sendNotificationEmail } from "@/lib/email";
 
 const DEFAULT_DELAY_MINUTES = 60;
+const DEFAULT_BANNER_TEXT = "Units Currently Responding";
 
-/** Search an object for the first matching key (case-sensitive, then case-insensitive) */
+/** Search an object for the first matching key */
 function findField(obj: Record<string, unknown>, keys: string[]): string {
-  // Exact match first
   for (const key of keys) {
     if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
       return String(obj[key]);
     }
   }
-  // Case-insensitive fallback
   const objKeys = Object.keys(obj);
   for (const key of keys) {
     const found = objKeys.find((k) => k.toLowerCase() === key.toLowerCase());
@@ -20,7 +19,6 @@ function findField(obj: Record<string, unknown>, keys: string[]): string {
       return String(obj[found]);
     }
   }
-  // Search nested objects one level deep
   for (const val of Object.values(obj)) {
     if (val && typeof val === "object" && !Array.isArray(val)) {
       const nested = findField(val as Record<string, unknown>, keys);
@@ -29,21 +27,62 @@ function findField(obj: Record<string, unknown>, keys: string[]): string {
   }
   return "";
 }
-const DEFAULT_BANNER_TEXT = "Units Currently Responding";
+
+/** Try to extract an incident ID from the payload for deduplication */
+function findIncidentId(obj: Record<string, unknown>): string {
+  return findField(obj, [
+    "IncidentId", "incidentId", "incident_id", "Id", "id", "ID",
+    "IncidentNumber", "incidentNumber", "incident_number",
+    "CadId", "cadId", "cad_id", "CallId", "callId", "call_id",
+    "ExternalId", "externalId", "external_id",
+  ]);
+}
+
+/** Try to detect the event type (creation, update, close) */
+function findEventType(obj: Record<string, unknown>): "create" | "update" | "close" {
+  const eventType = findField(obj, [
+    "EventType", "eventType", "event_type", "Action", "action",
+    "Type", "type", "Status", "status", "IncidentStatus", "incidentStatus",
+  ]).toLowerCase();
+
+  if (eventType.includes("close") || eventType.includes("clear") || eventType.includes("cancel") || eventType.includes("end")) {
+    return "close";
+  }
+  if (eventType.includes("update") || eventType.includes("modify") || eventType.includes("change")) {
+    return "update";
+  }
+  return "create";
+}
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify webhook secret if configured
+    // Verify auth — supports Bearer token, query param, and Basic Auth
     const secret = process.env.IAR_WEBHOOK_SECRET;
     if (secret) {
-      const authHeader = req.headers.get("authorization");
+      const authHeader = req.headers.get("authorization") || "";
       const querySecret = req.nextUrl.searchParams.get("secret");
-      if (authHeader !== `Bearer ${secret}` && querySecret !== secret) {
+
+      let authorized = false;
+
+      // Bearer token
+      if (authHeader === `Bearer ${secret}`) authorized = true;
+      // Query param
+      if (querySecret === secret) authorized = true;
+      // Basic Auth — accept if password matches secret
+      if (authHeader.startsWith("Basic ")) {
+        try {
+          const decoded = atob(authHeader.slice(6));
+          const password = decoded.split(":").slice(1).join(":");
+          if (password === secret) authorized = true;
+        } catch { /* invalid base64 */ }
+      }
+
+      if (!authorized) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 
-    // Capture raw body first for logging
+    // Capture raw body
     const rawText = await req.text();
     let incident: Record<string, unknown> = {};
     try {
@@ -55,7 +94,11 @@ export async function POST(req: NextRequest) {
     const db = getAdminDb();
     const now = new Date();
 
-    // Load call config (delay, banner text, type→image mapping)
+    // Detect event type and incident ID
+    const eventType = findEventType(incident);
+    const iarIncidentId = findIncidentId(incident);
+
+    // Load call config
     let delayMinutes = DEFAULT_DELAY_MINUTES;
     let bannerText = DEFAULT_BANNER_TEXT;
     let typeImageMap: Record<string, string> = {};
@@ -70,16 +113,131 @@ export async function POST(req: NextRequest) {
         typeImageMap = config.typeImageMap || {};
         autoPublish = config.autoPublish ?? true;
       }
-    } catch {
-      // Use defaults
+    } catch { /* defaults */ }
+
+    // Extract fields
+    const callType = findField(incident, [
+      "MessageSubject", "callType", "type", "call_type", "Subject",
+      "IncidentType", "incident_type", "Nature", "nature",
+    ]) || "";
+    const address = findField(incident, [
+      "Address", "address", "location", "Location", "VerifiedAddress",
+      "verified_address", "IncidentAddress", "incident_address",
+    ]) || "";
+    const message = findField(incident, [
+      "MessageBody", "message", "Message", "Body", "body",
+      "Description", "description", "Details", "details",
+    ]) || rawText;
+
+    // Always log the raw payload
+    await db.collection("iarLogs").add({
+      iarIncidentId: iarIncidentId || null,
+      eventType,
+      callType,
+      address,
+      message,
+      rawPayload: rawText,
+      createdAt: now.toISOString(),
+    });
+
+    // --- FIND EXISTING CALL (by IAR incident ID or recent match) ---
+    let existingCallId: string | null = null;
+
+    if (iarIncidentId) {
+      // Look up by IAR incident ID
+      const existing = await db
+        .collection("calls")
+        .where("iarIncidentId", "==", iarIncidentId)
+        .limit(1)
+        .get();
+      if (!existing.empty) {
+        existingCallId = existing.docs[0].id;
+      }
+    }
+
+    // If no IAR ID match, try to find a recent IAR call with same type+address (within 2 hours)
+    if (!existingCallId && callType && address) {
+      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+      const recent = await db
+        .collection("calls")
+        .where("source", "==", "iar")
+        .where("title", "==", callType || "Emergency Response")
+        .where("location", "==", address)
+        .limit(5)
+        .get();
+      for (const d of recent.docs) {
+        const data = d.data();
+        if (data.date && data.date >= twoHoursAgo.split("T")[0]) {
+          existingCallId = d.id;
+          break;
+        }
+      }
+    }
+
+    // --- HANDLE BY EVENT TYPE ---
+
+    if (eventType === "close") {
+      // Clear the active call banner
+      await db.collection("settings").doc("activeCall").set({
+        active: false,
+        bannerText: "",
+        dispatchedAt: "",
+        expiresAt: "",
+        callId: existingCallId || "",
+        updatedAt: now.toISOString(),
+      });
+
+      // Update existing call with close info if found
+      if (existingCallId) {
+        const existingDoc = await db.collection("calls").doc(existingCallId).get();
+        const existingData = existingDoc.data();
+        const updatedDesc = existingData?.description
+          ? `${existingData.description}\n\nCall cleared at ${now.toLocaleTimeString()}.`
+          : `Call cleared at ${now.toLocaleTimeString()}.`;
+        await db.collection("calls").doc(existingCallId).update({
+          description: updatedDesc,
+          updatedAt: now.toISOString(),
+        });
+      }
+
+      return NextResponse.json({ success: true, action: "close", callId: existingCallId });
+    }
+
+    if (eventType === "update" && existingCallId) {
+      // Append update info to existing call
+      const existingDoc = await db.collection("calls").doc(existingCallId).get();
+      const existingData = existingDoc.data();
+
+      const updates: Record<string, unknown> = { updatedAt: now.toISOString() };
+
+      // Update address if provided and different
+      if (address && address !== existingData?.location) {
+        updates.location = address;
+      }
+      // Append message if new info
+      if (message && message !== rawText && message !== existingData?.description) {
+        updates.description = existingData?.description
+          ? `${existingData.description}\n\nUpdate: ${message}`
+          : message;
+      }
+
+      await db.collection("calls").doc(existingCallId).update(updates);
+
+      return NextResponse.json({ success: true, action: "update", callId: existingCallId });
+    }
+
+    // --- INCIDENT CREATION ---
+
+    // Don't create duplicate if we already have this incident
+    if (existingCallId) {
+      return NextResponse.json({
+        success: true,
+        action: "duplicate_skipped",
+        callId: existingCallId,
+      });
     }
 
     const releaseAt = new Date(now.getTime() + delayMinutes * 60 * 1000);
-
-    // Extract fields — try every plausible key (we don't know IAR's exact format yet)
-    const callType = findField(incident, ["MessageSubject", "callType", "type", "call_type", "Type", "Subject", "IncidentType", "incident_type", "Nature", "nature"]) || "";
-    const address = findField(incident, ["Address", "address", "location", "Location", "VerifiedAddress", "verified_address", "IncidentAddress", "incident_address"]) || "";
-    const message = findField(incident, ["MessageBody", "message", "Message", "Body", "body", "Description", "description", "Details", "details", "raw"]) || rawText;
 
     // Find default image for this call type
     const callTypeLower = callType.toLowerCase();
@@ -91,14 +249,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Generate slug
-    const slug = callType
+    const slug = (callType || "emergency-response")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
-      + "-" + now.toISOString().split("T")[0];
+      + "-" + now.toISOString().split("T")[0]
+      + "-" + now.getTime().toString(36);
 
-    // Create the call document in the calls collection
     const callDoc = {
       title: callType || "Emergency Response",
       description: message,
@@ -111,12 +268,13 @@ export async function POST(req: NextRequest) {
       status: autoPublish ? "pending" : "pending",
       releaseAt: releaseAt.toISOString(),
       source: "iar",
+      iarIncidentId: iarIncidentId || null,
       rawPayload: rawText,
     };
 
     const callRef = await db.collection("calls").add(callDoc);
 
-    // Update active call banner (minimal info only — no details)
+    // Set active call banner
     await db.collection("settings").doc("activeCall").set({
       active: true,
       bannerText,
@@ -126,17 +284,7 @@ export async function POST(req: NextRequest) {
       updatedAt: now.toISOString(),
     });
 
-    // Log raw payload
-    await db.collection("iarLogs").add({
-      callId: callRef.id,
-      callType,
-      address,
-      message,
-      rawPayload: rawText,
-      createdAt: now.toISOString(),
-    });
-
-    // Send email notification (internal only — full details for admin)
+    // Email notification
     try {
       await sendNotificationEmail(
         `Dispatch: ${callType || "New Call"}`,
@@ -144,17 +292,15 @@ export async function POST(req: NextRequest) {
         <p><strong>Type:</strong> ${callType || "Unknown"}</p>
         <p><strong>Address:</strong> ${address || "Unknown"}</p>
         <p><strong>Time:</strong> ${now.toLocaleString()}</p>
-        ${message ? `<p><strong>Details:</strong> ${message}</p>` : ""}
-        <p><strong>Public release:</strong> ${releaseAt.toLocaleString()}</p>
-        <p><a href="${req.headers.get("origin") || ""}/admin/active-call">View in Admin</a></p>`,
+        ${message && message !== rawText ? `<p><strong>Details:</strong> ${message}</p>` : ""}
+        <p><strong>Public release:</strong> ${releaseAt.toLocaleString()}</p>`,
         "general"
       );
-    } catch {
-      // Don't fail webhook if email fails
-    }
+    } catch { /* don't fail webhook */ }
 
     return NextResponse.json({
       success: true,
+      action: "create",
       callId: callRef.id,
       releaseAt: releaseAt.toISOString(),
     });
