@@ -15,6 +15,25 @@ import { Call } from "@/types";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Clock, MapPin, Siren } from "lucide-react";
 
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTime(time: string): string {
+  if (!time) return "";
+  const [h, m] = time.split(":");
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
 export default function CallDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
@@ -102,12 +121,12 @@ export default function CallDetailPage() {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         {call.date && (
           <span className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-3 py-1.5 rounded-full">
-            <Calendar size={12} /> {call.date}
+            <Calendar size={12} /> {formatDate(call.date)}
           </span>
         )}
         {call.time && (
           <span className="flex items-center gap-1.5 bg-gray-100 border border-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full">
-            <Clock size={12} /> {call.time}
+            <Clock size={12} /> {formatTime(call.time)}
           </span>
         )}
         {call.location && (
