@@ -105,9 +105,17 @@ export async function POST(req: NextRequest) {
     const db = getAdminDb();
     const now = new Date();
 
-    // Detect event type and incident ID
-    const eventType = findEventType(incident);
-    const iarIncidentId = findIncidentId(incident);
+    // --- IAR-specific extraction (known payload structure) ---
+    const headers = incident.headers as Record<string, unknown> | undefined;
+    const details = incident.details as Record<string, unknown> | undefined;
+
+    // Detect event type
+    const eventType = details?.closed === true
+      ? "close" as const
+      : findEventType(incident);
+
+    // Incident ID — IAR uses details.id
+    const iarIncidentId = String(details?.id || "") || findIncidentId(incident);
 
     // Load call config
     let delayMinutes = DEFAULT_DELAY_MINUTES;
@@ -126,19 +134,25 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* defaults */ }
 
-    // Extract fields
-    const callType = findField(incident, [
-      "MessageSubject", "callType", "type", "call_type", "Subject",
-      "IncidentType", "incident_type", "Nature", "nature",
-    ]) || "";
-    const address = findField(incident, [
-      "Address", "address", "location", "Location", "VerifiedAddress",
-      "verified_address", "IncidentAddress", "incident_address",
-    ]) || "";
-    const message = findField(incident, [
-      "MessageBody", "message", "Message", "Body", "body",
-      "Description", "description", "Details", "details",
-    ]) || rawText;
+    // Extract fields — IAR-specific first, then generic fallback
+    const callType =
+      String(headers?.type || "") ||
+      findField(incident, ["MessageSubject", "callType", "type", "call_type", "Subject", "IncidentType", "Nature"]) ||
+      "";
+
+    const address =
+      String(headers?.address || "") ||
+      findField(incident, ["Address", "address", "location", "Location", "VerifiedAddress", "IncidentAddress"]) ||
+      "";
+
+    // For description: use plainText (IAR's formatted summary), then comments, then generic fallback
+    const plainText = String(incident.plainText || "");
+    const comments = Array.isArray(incident.comments)
+      ? incident.comments.map((c: Record<string, unknown>) => String(c.message || "")).filter(Boolean).join("\n")
+      : "";
+    const message = plainText || comments ||
+      findField(incident, ["MessageBody", "message", "Message", "Body", "body", "Description"]) ||
+      rawText;
 
     // Always log the raw payload
     await db.collection("iarLogs").add({
