@@ -5,18 +5,29 @@ import { sendNotificationEmail } from "@/lib/email";
 const DEFAULT_DELAY_MINUTES = 60;
 const DEFAULT_BANNER_TEXT = "Units Currently Responding";
 
+/** Convert a value to a readable string */
+function toStr(val: unknown): string {
+  if (val === undefined || val === null || val === "") return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (typeof val === "object") {
+    try { return JSON.stringify(val, null, 2); } catch { return ""; }
+  }
+  return String(val);
+}
+
 /** Search an object for the first matching key */
 function findField(obj: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
-    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
-      return String(obj[key]);
-    }
+    const str = toStr(obj[key]);
+    if (str) return str;
   }
   const objKeys = Object.keys(obj);
   for (const key of keys) {
     const found = objKeys.find((k) => k.toLowerCase() === key.toLowerCase());
-    if (found && obj[found] !== undefined && obj[found] !== null && obj[found] !== "") {
-      return String(obj[found]);
+    if (found) {
+      const str = toStr(obj[found]);
+      if (str) return str;
     }
   }
   for (const val of Object.values(obj)) {
