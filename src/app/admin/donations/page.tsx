@@ -43,7 +43,10 @@ export default function AdminDonationsPage() {
   }
 
   useEffect(() => {
-    fetchDonations();
+    const timer = setTimeout(() => {
+      void fetchDonations();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleDelete = async (id: string) => {

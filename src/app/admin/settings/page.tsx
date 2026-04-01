@@ -3,10 +3,22 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc, setDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { Event } from "@/types";
+import { Event, HomePageFeedSettings } from "@/types";
 import { geocodeZip } from "@/lib/weather";
 import { Settings, Check, Mail, Bell } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
+
+const DEFAULT_HOME_FEED_SETTINGS: HomePageFeedSettings = {
+  newsCount: 6,
+  eventsCount: 6,
+  callsCount: 6,
+};
+
+function sanitizeCount(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 24) return fallback;
+  return parsed;
+}
 
 export default function AdminSettingsPage() {
   const [zipCode, setZipCode] = useState("12025");
@@ -37,18 +49,21 @@ export default function AdminSettingsPage() {
   const [contactStatus, setContactStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fbStatus, setFbStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [noticeStatus, setNoticeStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [homeFeedSettings, setHomeFeedSettings] = useState<HomePageFeedSettings>(DEFAULT_HOME_FEED_SETTINGS);
+  const [homeFeedStatus, setHomeFeedStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const [weatherDoc, heroDoc, fbDoc, emailDoc, contactDoc, noticeDoc] = await Promise.all([
+        const [weatherDoc, heroDoc, fbDoc, emailDoc, contactDoc, noticeDoc, homepageDoc] = await Promise.all([
           getDoc(doc(getDb(), "settings", "weather")),
           getDoc(doc(getDb(), "settings", "hero")),
           getDoc(doc(getDb(), "settings", "facebook")),
           getDoc(doc(getDb(), "settings", "emailRouting")),
           getDoc(doc(getDb(), "settings", "contact")),
           getDoc(doc(getDb(), "settings", "notice")),
+          getDoc(doc(getDb(), "settings", "homepage")),
         ]);
         if (weatherDoc.exists()) {
           const data = weatherDoc.data();
@@ -74,6 +89,14 @@ export default function AdminSettingsPage() {
             linkType: nd.linkType || "none",
             linkUrl: nd.linkUrl || "",
             linkText: nd.linkText || "",
+          });
+        }
+        if (homepageDoc.exists()) {
+          const hd = homepageDoc.data();
+          setHomeFeedSettings({
+            newsCount: sanitizeCount(hd.newsCount, DEFAULT_HOME_FEED_SETTINGS.newsCount),
+            eventsCount: sanitizeCount(hd.eventsCount, DEFAULT_HOME_FEED_SETTINGS.eventsCount),
+            callsCount: sanitizeCount(hd.callsCount, DEFAULT_HOME_FEED_SETTINGS.callsCount),
           });
         }
         // Fetch events for notice link picker
@@ -214,6 +237,28 @@ export default function AdminSettingsPage() {
       setTimeout(() => setHeroStatus("idle"), 2000);
     } catch {
       setHeroStatus("error");
+    }
+  };
+
+  const updateHomeFeedSetting = (key: keyof HomePageFeedSettings, value: string) => {
+    const fallback = DEFAULT_HOME_FEED_SETTINGS[key];
+    setHomeFeedSettings((prev) => ({
+      ...prev,
+      [key]: sanitizeCount(value, fallback),
+    }));
+  };
+
+  const handleHomeFeedSave = async () => {
+    setHomeFeedStatus("saving");
+    try {
+      await setDoc(doc(getDb(), "settings", "homepage"), {
+        ...homeFeedSettings,
+        updatedAt: new Date().toISOString(),
+      });
+      setHomeFeedStatus("saved");
+      setTimeout(() => setHomeFeedStatus("idle"), 2000);
+    } catch {
+      setHomeFeedStatus("error");
     }
   };
 
@@ -420,6 +465,62 @@ export default function AdminSettingsPage() {
             </button>
 
             {heroStatus === "error" && (
+              <p className="text-red-400 text-sm">Failed to save.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Homepage Feed Counts */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-white mb-2">
+            Homepage Content Counts
+          </h2>
+          <p className="text-gray-400 text-sm mb-4">
+            Control how many items display on the home page for News, Events,
+            and Recent Calls.
+          </p>
+
+          <div className="space-y-3">
+            {[
+              { key: "newsCount", label: "News Items" },
+              { key: "eventsCount", label: "Event Items" },
+              { key: "callsCount", label: "Recent Calls" },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={homeFeedSettings[key as keyof HomePageFeedSettings]}
+                  onChange={(e) =>
+                    updateHomeFeedSetting(
+                      key as keyof HomePageFeedSettings,
+                      e.target.value
+                    )
+                  }
+                  className={inputClass}
+                />
+              </div>
+            ))}
+
+            <button
+              onClick={handleHomeFeedSave}
+              disabled={homeFeedStatus === "saving"}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+            >
+              {homeFeedStatus === "saving" ? (
+                "Saving..."
+              ) : homeFeedStatus === "saved" ? (
+                <>
+                  <Check size={16} /> Saved
+                </>
+              ) : (
+                "Save Homepage Counts"
+              )}
+            </button>
+
+            {homeFeedStatus === "error" && (
               <p className="text-red-400 text-sm">Failed to save.</p>
             )}
           </div>

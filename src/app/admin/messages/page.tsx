@@ -42,7 +42,10 @@ export default function AdminMessagesPage() {
   }
 
   useEffect(() => {
-    fetchMessages();
+    const timer = setTimeout(() => {
+      void fetchMessages();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const markRead = async (msg: ContactMessage) => {

@@ -45,7 +45,10 @@ export default function AdminNewsPage() {
   }
 
   useEffect(() => {
-    fetchArticles();
+    const timer = setTimeout(() => {
+      void fetchArticles();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const generateSlug = (title: string) =>

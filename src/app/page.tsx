@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import {
   collection,
+  doc,
+  getDoc,
   query,
   orderBy,
   getDocs,
   where,
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { Call, NewsArticle, Event } from "@/types";
+import { Call, NewsArticle, Event, HomePageFeedSettings } from "@/types";
 import Hero from "@/components/Hero";
 import CallCard from "@/components/CallCard";
 import WeatherForecast from "@/components/WeatherForecast";
@@ -33,16 +35,30 @@ import {
   Pin,
 } from "lucide-react";
 
+const DEFAULT_COUNTS: HomePageFeedSettings = {
+  newsCount: 6,
+  eventsCount: 6,
+  callsCount: 6,
+};
+
+function sanitizeCount(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 24) return fallback;
+  return parsed;
+}
+
 export default function HomePage() {
   const [calls, setCalls] = useState<Call[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [sectionCounts, setSectionCounts] =
+    useState<HomePageFeedSettings>(DEFAULT_COUNTS);
   const [loadingCalls, setLoadingCalls] = useState(true);
   const [loadingNews, setLoadingNews] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
   useEffect(() => {
-    async function fetchCalls() {
+    async function fetchCalls(count: number) {
       try {
         const q = query(
           collection(getDb(), "calls"),
@@ -51,7 +67,7 @@ export default function HomePage() {
         const snapshot = await getDocs(q);
         const allCalls = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[];
         const publicCalls = filterPublicCalls(allCalls);
-        setCalls(sortPinned(publicCalls).slice(0, 6));
+        setCalls(sortPinned(publicCalls).slice(0, count));
       } catch (err) {
         console.error("Error fetching calls:", err);
       } finally {
@@ -59,7 +75,7 @@ export default function HomePage() {
       }
     }
 
-    async function fetchNews() {
+    async function fetchNews(count: number) {
       try {
         const q = query(
           collection(getDb(), "news"),
@@ -68,7 +84,7 @@ export default function HomePage() {
         );
         const snapshot = await getDocs(q);
         const all = sortPinned(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as NewsArticle[]);
-        setNews(all.slice(0, 6));
+        setNews(all.slice(0, count));
       } catch (err) {
         console.error("Error fetching news:", err);
       } finally {
@@ -76,7 +92,7 @@ export default function HomePage() {
       }
     }
 
-    async function fetchEvents() {
+    async function fetchEvents(count: number) {
       try {
         const today = new Date().toISOString().split("T")[0];
         const q = query(
@@ -87,7 +103,7 @@ export default function HomePage() {
         );
         const snapshot = await getDocs(q);
         const all = sortPinned(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Event[]);
-        setEvents(all.slice(0, 6));
+        setEvents(all.slice(0, count));
       } catch (err) {
         console.error("Error fetching events:", err);
       } finally {
@@ -95,9 +111,29 @@ export default function HomePage() {
       }
     }
 
-    fetchCalls();
-    fetchNews();
-    fetchEvents();
+    async function loadHomePageData() {
+      let counts = DEFAULT_COUNTS;
+      try {
+        const settingsSnap = await getDoc(doc(getDb(), "settings", "homepage"));
+        if (settingsSnap.exists()) {
+          const data = settingsSnap.data();
+          counts = {
+            newsCount: sanitizeCount(data.newsCount, DEFAULT_COUNTS.newsCount),
+            eventsCount: sanitizeCount(data.eventsCount, DEFAULT_COUNTS.eventsCount),
+            callsCount: sanitizeCount(data.callsCount, DEFAULT_COUNTS.callsCount),
+          };
+        }
+      } catch (err) {
+        console.error("Error fetching homepage settings:", err);
+      }
+
+      setSectionCounts(counts);
+      fetchCalls(counts.callsCount);
+      fetchNews(counts.newsCount);
+      fetchEvents(counts.eventsCount);
+    }
+
+    loadHomePageData();
   }, []);
 
   const formatDate = (dateStr: string) => {
@@ -171,7 +207,7 @@ export default function HomePage() {
           />
 
           {loadingEvents ? (
-            <SkeletonGrid count={3} height="h-48" />
+            <SkeletonGrid count={sectionCounts.eventsCount} height="h-48" />
           ) : events.length === 0 ? (
             <EmptyState text="No upcoming events." />
           ) : (
@@ -257,7 +293,7 @@ export default function HomePage() {
           />
 
           {loadingNews ? (
-            <SkeletonGrid count={3} height="h-72" />
+            <SkeletonGrid count={sectionCounts.newsCount} height="h-72" />
           ) : news.length === 0 ? (
             <EmptyState text="No news articles to display." />
           ) : (
@@ -315,7 +351,7 @@ export default function HomePage() {
           />
 
           {loadingCalls ? (
-            <SkeletonGrid count={6} height="h-72" />
+            <SkeletonGrid count={sectionCounts.callsCount} height="h-72" />
           ) : calls.length === 0 ? (
             <EmptyState text="No recent calls to display." />
           ) : (

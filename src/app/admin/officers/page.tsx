@@ -93,7 +93,10 @@ export default function AdminOfficersPage() {
   }
 
   useEffect(() => {
-    fetchOfficers();
+    const timer = setTimeout(() => {
+      void fetchOfficers();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSave = async () => {

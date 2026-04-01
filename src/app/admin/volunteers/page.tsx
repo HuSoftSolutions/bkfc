@@ -47,7 +47,10 @@ export default function AdminVolunteersPage() {
   }
 
   useEffect(() => {
-    fetchApps();
+    const timer = setTimeout(() => {
+      void fetchApps();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleReviewed = async (app: VolunteerApp) => {

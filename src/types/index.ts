@@ -109,6 +109,12 @@ export interface ContactFormData {
   recaptchaToken: string;
 }
 
+export interface HomePageFeedSettings {
+  newsCount: number;
+  eventsCount: number;
+  callsCount: number;
+}
+
 export interface VolunteerFormData {
   firstName: string;
   lastName: string;

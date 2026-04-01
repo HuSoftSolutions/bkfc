@@ -36,7 +36,10 @@ export default function AdminRegistrationsPage() {
   }
 
   useEffect(() => {
-    fetchRegistrations();
+    const timer = setTimeout(() => {
+      void fetchRegistrations();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const markPaid = async (id: string) => {

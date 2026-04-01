@@ -52,7 +52,10 @@ export default function AdminEventsPage() {
   }
 
   useEffect(() => {
-    fetchEvents();
+    const timer = setTimeout(() => {
+      void fetchEvents();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Ticket option helpers

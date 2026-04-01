@@ -46,7 +46,10 @@ export default function AdminCallsPage() {
   }
 
   useEffect(() => {
-    fetchCalls();
+    const timer = setTimeout(() => {
+      void fetchCalls();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const generateSlug = (title: string) =>

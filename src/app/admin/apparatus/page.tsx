@@ -37,7 +37,10 @@ export default function AdminApparatusPage() {
   }
 
   useEffect(() => {
-    fetchApparatus();
+    const timer = setTimeout(() => {
+      void fetchApparatus();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const startEdit = (item: Partial<Apparatus>) => {
