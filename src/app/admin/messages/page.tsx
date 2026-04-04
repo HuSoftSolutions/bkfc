@@ -64,6 +64,7 @@ export default function AdminMessagesPage() {
     await deleteDoc(doc(getDb(), "contactSubmissions", id));
     if (selected?.id === id) setSelected(null);
     fetchMessages();
+    refreshBadges();
   };
 
   return (
