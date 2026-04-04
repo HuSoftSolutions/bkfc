@@ -177,7 +177,7 @@ export default function EventDetailPage() {
             href={`/events/${event.id}/register`}
             className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors"
           >
-            Register / Order Now
+            Buy Now
           </Link>
           {event.payInPerson && (
             <p className="text-gray-500 text-sm mt-2">
@@ -222,7 +222,7 @@ export default function EventDetailPage() {
               href={`/events/${event.id}/register`}
               className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
             >
-              Register / Order Now
+              Buy Now
             </Link>
           </div>
         </div>

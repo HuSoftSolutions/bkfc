@@ -8,21 +8,6 @@ export default function Footer() {
   const contactEmail = useContactEmail();
   return (
     <footer className="bg-gray-900 text-gray-400">
-      {/* Emergency banner */}
-      <div className="bg-red-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-sm">
-          <span className="text-red-200 font-bold uppercase tracking-wider text-xs">
-            In case of emergency
-          </span>
-          <a
-            href="tel:911"
-            className="text-white font-bold text-lg hover:text-red-200 transition-colors"
-          >
-            Dial 9-1-1
-          </a>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand */}

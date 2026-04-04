@@ -31,17 +31,28 @@ const emptyCall = {
 };
 
 export default function AdminCallsPage() {
-  const [calls, setCalls] = useState<Call[]>([]);
+  const [allCalls, setAllCalls] = useState<Call[]>([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [editing, setEditing] = useState<Partial<Call> | null>(null);
   const [page, setPage] = useState(1);
 
+  const calls = allCalls.filter((c) => c.date.startsWith(selectedYear));
   const totalPages = Math.ceil(calls.length / PER_PAGE);
   const paginated = calls.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  // Available years from data
+  const availableYears = [...new Set(allCalls.map((c) => c.date.substring(0, 4)))].sort().reverse();
 
   async function fetchCalls() {
     const q = query(collection(getDb(), "calls"), orderBy("date", "desc"));
     const snap = await getDocs(q);
-    setCalls(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Call[]);
+    const all = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Call[];
+    all.sort((a, b) => {
+      const dateCmp = b.date.localeCompare(a.date);
+      if (dateCmp !== 0) return dateCmp;
+      return (b.time || "").localeCompare(a.time || "");
+    });
+    setAllCalls(all);
     setPage(1);
   }
 
@@ -113,8 +124,25 @@ export default function AdminCallsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Manage Calls</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">
+            Manage Calls
+            <span className="text-gray-500 font-normal text-base ml-2">({calls.length})</span>
+          </h1>
+          <select
+            value={selectedYear}
+            onChange={(e) => { setSelectedYear(e.target.value); setPage(1); }}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-sm focus:border-red-500 focus:outline-none"
+          >
+            {availableYears.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+            {availableYears.length === 0 && (
+              <option value={selectedYear}>{selectedYear}</option>
+            )}
+          </select>
+        </div>
         <button
           onClick={() => setEditing({ ...emptyCall })}
           className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -203,15 +231,15 @@ export default function AdminCallsPage() {
         {paginated.map((call) => (
           <div
             key={call.id}
-            className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
+            className="flex items-center justify-between gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 sm:px-4 py-3"
           >
-            <div>
-              <p className="text-white font-medium">{call.title}</p>
+            <div className="min-w-0">
+              <p className="text-white font-medium truncate">{call.title}</p>
               <p className="text-gray-500 text-xs">
                 {call.date} {call.time && `• ${call.time}`} {call.location && `• ${call.location}`}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => togglePin(call)}
                 className={`p-1 ${call.pinned ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}

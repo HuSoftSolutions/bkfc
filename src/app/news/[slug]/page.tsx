@@ -8,6 +8,54 @@ import { NewsArticle } from "@/types";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Newspaper } from "lucide-react";
 
+function linkifyContent(text: string) {
+  // Supports [link text](url) markdown-style links and bare URLs
+  const linkRegex = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\))|(https?:\/\/[^\s]+)/g;
+  const elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      elements.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1]) {
+      // [text](url) style
+      elements.push(
+        <a
+          key={match.index}
+          href={match[3]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-red-600 hover:text-red-700 underline"
+        >
+          {match[2]}
+        </a>
+      );
+    } else {
+      // bare URL
+      elements.push(
+        <a
+          key={match.index}
+          href={match[4]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-red-600 hover:text-red-700 underline"
+        >
+          {match[4]}
+        </a>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    elements.push(text.slice(lastIndex));
+  }
+
+  return elements;
+}
+
 export default function NewsArticlePage() {
   const params = useParams();
   const slug = params.slug as string;
@@ -108,7 +156,7 @@ export default function NewsArticlePage() {
 
       {/* Body */}
       <div className="text-gray-600 text-base md:text-lg leading-relaxed whitespace-pre-wrap">
-        {article.content}
+        {linkifyContent(article.content)}
       </div>
     </article>
   );

@@ -24,7 +24,14 @@ export default function CallsPage() {
       try {
         const q = query(collection(getDb(), "calls"), orderBy("date", "desc"));
         const snapshot = await getDocs(q);
-        const allCalls = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[];
+        const currentYear = new Date().getFullYear().toString();
+        const allCalls = (snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[])
+          .filter((c) => c.date.startsWith(currentYear));
+        allCalls.sort((a, b) => {
+          const dateCmp = b.date.localeCompare(a.date);
+          if (dateCmp !== 0) return dateCmp;
+          return (b.time || "").localeCompare(a.time || "");
+        });
         setCalls(filterPublicCalls(allCalls));
       } catch (err) {
         console.error("Error fetching calls:", err);

@@ -52,11 +52,6 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Contact Info */}
           <div>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
-              <p className="text-red-700 font-bold text-lg">
-                IN CASE OF EMERGENCY DIAL 9-1-1
-              </p>
-            </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Department Information

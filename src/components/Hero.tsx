@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { doc, getDoc, collection, getCountFromServer } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Siren, Users, Shield, ChevronDown } from "lucide-react";
 
@@ -55,11 +55,20 @@ export default function Hero({
     async function loadCounts() {
       try {
         const [callsSnap, officersSnap] = await Promise.all([
-          getCountFromServer(collection(getDb(), "calls")),
-          getCountFromServer(collection(getDb(), "officers")),
+          getDocs(collection(getDb(), "calls")),
+          getDocs(collection(getDb(), "officers")),
         ]);
-        setCallCount(callsSnap.data().count);
-        setVolunteerCount(officersSnap.data().count);
+        const currentYear = new Date().getFullYear().toString();
+        const currentYearCalls = callsSnap.docs.filter((d) => (d.data().date || "").startsWith(currentYear));
+        setCallCount(currentYearCalls.length);
+        const nonHonorary = officersSnap.docs.filter((d) => {
+          const data = d.data();
+          const ranks: string[] = data.ranks || [];
+          const legacy = (data.rank || data.title || "").toLowerCase();
+          const allRanks = ranks.length > 0 ? ranks.map((r: string) => r.toLowerCase()) : [legacy];
+          return !allRanks.some((r: string) => r.includes("honorary"));
+        });
+        setVolunteerCount(nonHonorary.length);
       } catch {
         // fallback
       }

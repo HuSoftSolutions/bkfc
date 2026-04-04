@@ -65,7 +65,14 @@ export default function HomePage() {
           orderBy("date", "desc")
         );
         const snapshot = await getDocs(q);
-        const allCalls = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[];
+        const currentYear = new Date().getFullYear().toString();
+        const allCalls = (snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Call[])
+          .filter((c) => c.date.startsWith(currentYear));
+        allCalls.sort((a, b) => {
+          const dateCmp = b.date.localeCompare(a.date);
+          if (dateCmp !== 0) return dateCmp;
+          return (b.time || "").localeCompare(a.time || "");
+        });
         const publicCalls = filterPublicCalls(allCalls);
         setCalls(sortPinned(publicCalls).slice(0, count));
       } catch (err) {
@@ -197,8 +204,34 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Upcoming Events */}
+      {/* Recent Calls */}
       <section className="relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
+          <SectionHeader
+            icon={<Siren size={20} />}
+            title="Recent Calls"
+            href="/calls"
+          />
+
+          {loadingCalls ? (
+            <SkeletonGrid count={sectionCounts.callsCount} height="h-72" />
+          ) : calls.length === 0 ? (
+            <EmptyState text="No recent calls to display." />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {calls.map((call) => (
+                <CallCard
+                  key={call.id}
+                  call={call}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Upcoming Events */}
+      <section className="relative bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
           <SectionHeader
             icon={<CalendarDays size={20} />}
@@ -284,7 +317,7 @@ export default function HomePage() {
       </section>
 
       {/* Latest News */}
-      <section className="relative bg-gray-50">
+      <section className="relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
           <SectionHeader
             icon={<Newspaper size={20} />}
@@ -335,32 +368,6 @@ export default function HomePage() {
                     </p>
                   </div>
                 </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Recent Calls */}
-      <section className="relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-          <SectionHeader
-            icon={<Siren size={20} />}
-            title="Recent Calls"
-            href="/calls"
-          />
-
-          {loadingCalls ? (
-            <SkeletonGrid count={sectionCounts.callsCount} height="h-72" />
-          ) : calls.length === 0 ? (
-            <EmptyState text="No recent calls to display." />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {calls.map((call) => (
-                <CallCard
-                  key={call.id}
-                  call={call}
-                />
               ))}
             </div>
           )}

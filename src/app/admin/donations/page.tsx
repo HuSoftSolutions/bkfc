@@ -6,11 +6,9 @@ import {
   query,
   orderBy,
   getDocs,
-  deleteDoc,
-  doc,
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { Trash2, CheckCircle, Clock, Heart } from "lucide-react";
+import { CheckCircle, Clock, Heart } from "lucide-react";
 import AdminPagination from "@/components/AdminPagination";
 
 const PER_PAGE = 15;
@@ -49,11 +47,6 @@ export default function AdminDonationsPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this donation record?")) return;
-    await deleteDoc(doc(getDb(), "donations", id));
-    fetchDonations();
-  };
 
   const filtered =
     filter === "all"
@@ -80,7 +73,7 @@ export default function AdminDonationsPage() {
       </h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <p className="text-gray-500 text-xs">Total Raised</p>
           <p className="text-green-400 text-2xl font-bold">
@@ -115,8 +108,8 @@ export default function AdminDonationsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase tracking-wider">
               <th className="text-left px-4 py-3">Status</th>
@@ -124,7 +117,6 @@ export default function AdminDonationsPage() {
               <th className="text-left px-4 py-3">Email</th>
               <th className="text-right px-4 py-3">Amount</th>
               <th className="text-left px-4 py-3">Date</th>
-              <th className="text-right px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -149,14 +141,6 @@ export default function AdminDonationsPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(donation.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => handleDelete(donation.id)}
-                    className="text-gray-600 hover:text-red-400 p-1"
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </td>
               </tr>
             ))}

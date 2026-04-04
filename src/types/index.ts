@@ -27,8 +27,11 @@ export interface Call {
 export interface Officer {
   id: string;
   name: string;
-  title: string;
-  rank: string;
+  /** @deprecated Use ranks instead */
+  title?: string;
+  /** @deprecated Use ranks instead */
+  rank?: string;
+  ranks: string[];
   servingSince?: string;
   image?: string;
   order: number;

@@ -84,14 +84,6 @@ export default function VolunteerPage() {
       />
 
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 text-center">
-          <p className="text-red-700 font-bold text-lg">
-            IN CASE OF EMERGENCY DIAL 9-1-1
-          </p>
-          <p className="text-gray-500 text-sm mt-1">
-            Station: (518) 883-3611
-          </p>
-        </div>
 
         <div className="mb-10 text-gray-600 leading-relaxed space-y-4">
           <p>

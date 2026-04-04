@@ -16,33 +16,56 @@ import { Officer } from "@/types";
 import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 import AdminPagination from "@/components/AdminPagination";
+import Select from "react-select";
 
 const PER_PAGE = 15;
 
 const RANK_OPTIONS = [
   "Chief",
   "Assistant Chief",
+  "2nd Assistant Chief",
+  "Fire Police Chief",
   "Captain",
   "Lieutenant",
   "Safety Officer",
   "Accountability Officer",
-  "Fire Police Chief",
   "President",
   "Vice President",
   "Treasurer",
   "Secretary",
   "Firefighter",
+  "Fire Police",
   "Probationary",
   "Junior Firefighter",
   "Administrative",
   "Honorary Member",
-  "Other",
 ];
+
+const rankSelectOptions = RANK_OPTIONS.map((r) => ({ value: r, label: r }));
+
+/** Normalize legacy single-rank data to ranks array */
+function getRanks(officer: Officer): string[] {
+  if (officer.ranks && officer.ranks.length > 0) return officer.ranks;
+  // Legacy: build from old rank/title fields
+  const parts: string[] = [];
+  if (officer.rank) {
+    officer.rank.split(",").forEach((r) => {
+      const trimmed = r.trim();
+      if (trimmed) parts.push(trimmed);
+    });
+  }
+  if (officer.title) {
+    officer.title.split(",").forEach((t) => {
+      const trimmed = t.trim();
+      if (trimmed && !parts.includes(trimmed)) parts.push(trimmed);
+    });
+  }
+  return parts.length > 0 ? parts : [];
+}
 
 const emptyOfficer: Partial<Officer> = {
   name: "",
-  title: "",
-  rank: "",
+  ranks: [],
   servingSince: "",
   image: "",
   order: 0,
@@ -67,15 +90,17 @@ export default function AdminOfficersPage() {
   };
 
   // Get unique ranks from data for filter options
-  const availableRanks = [...new Set(officers.map((o) => o.rank || "").filter(Boolean))].sort();
+  const availableRanks = [
+    ...new Set(officers.flatMap((o) => getRanks(o))),
+  ].sort();
 
   const filtered = officers.filter((o) => {
-    if (rankFilter && (o.rank || "") !== rankFilter) return false;
+    const ranks = getRanks(o);
+    if (rankFilter && !ranks.includes(rankFilter)) return false;
     if (searchQuery) {
       return (
         o.name.toLowerCase().includes(searchQuery) ||
-        (o.rank || "").toLowerCase().includes(searchQuery) ||
-        (o.title || "").toLowerCase().includes(searchQuery) ||
+        ranks.some((r) => r.toLowerCase().includes(searchQuery)) ||
         (o.servingSince || "").includes(searchQuery)
       );
     }
@@ -103,8 +128,7 @@ export default function AdminOfficersPage() {
     if (!editing) return;
     const data = {
       name: editing.name || "",
-      title: editing.title || "",
-      rank: editing.rank || "",
+      ranks: editing.ranks || [],
       servingSince: editing.servingSince || "",
       image: editing.image || "",
       order: editing.order || 0,
@@ -128,9 +152,12 @@ export default function AdminOfficersPage() {
   const inputClass =
     "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 focus:outline-none";
 
+  // When editing, normalize legacy data into ranks array
+  const editingRanks = editing ? (editing.ranks && editing.ranks.length > 0 ? editing.ranks : getRanks(editing as Officer)) : [];
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-white">Manage Roster</h1>
         <button
           onClick={() => setEditing({ ...emptyOfficer })}
@@ -142,7 +169,7 @@ export default function AdminOfficersPage() {
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-white">
                 {editing.id ? "Edit Member" : "Add Member"}
@@ -162,25 +189,35 @@ export default function AdminOfficersPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Rank</label>
-                <select
-                  value={editing.rank || ""}
-                  onChange={(e) => setEditing({ ...editing, rank: e.target.value })}
-                  className={inputClass}
-                >
-                  <option value="">Select rank...</option>
-                  {RANK_OPTIONS.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Title/Position (optional)</label>
-                <input
-                  value={editing.title || ""}
-                  onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-                  placeholder="e.g. 2nd Lieutenant, Secretary"
-                  className={inputClass}
+                <label className="block text-xs text-gray-400 mb-1">Ranks *</label>
+                <Select
+                  isMulti
+                  options={rankSelectOptions}
+                  value={editingRanks.map((r) => ({ value: r, label: r }))}
+                  onChange={(selected) =>
+                    setEditing({ ...editing, ranks: selected ? selected.map((s) => s.value) : [] })
+                  }
+                  placeholder="Select one or more ranks..."
+                  classNames={{
+                    control: () => "!bg-gray-800 !border-gray-700 !rounded-lg !min-h-[38px] !shadow-none",
+                    menu: () => "!bg-gray-800 !border !border-gray-700 !rounded-lg",
+                    option: ({ isFocused, isSelected }) =>
+                      `!text-sm ${isSelected ? "!bg-red-600 !text-white" : isFocused ? "!bg-gray-700 !text-white" : "!text-gray-300"}`,
+                    multiValue: () => "!bg-red-600/20 !rounded-md",
+                    multiValueLabel: () => "!text-red-400 !text-xs",
+                    multiValueRemove: () => "!text-red-400 hover:!bg-red-600/30 hover:!text-red-300 !rounded-r-md",
+                    input: () => "!text-white !text-sm",
+                    placeholder: () => "!text-gray-500 !text-sm",
+                    singleValue: () => "!text-white",
+                    indicatorSeparator: () => "!bg-gray-700",
+                    dropdownIndicator: () => "!text-gray-500",
+                    clearIndicator: () => "!text-gray-500 hover:!text-white",
+                  }}
+                  styles={{
+                    control: (base) => ({ ...base, borderColor: undefined }),
+                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                  }}
+                  menuPortalTarget={typeof document !== "undefined" ? document.body : null}
                 />
               </div>
               <div>
@@ -221,14 +258,14 @@ export default function AdminOfficersPage() {
       )}
 
       {/* Search + Filter */}
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={searchInput}
             onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search by name, rank, or title..."
+            placeholder="Search by name or rank..."
             className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none transition-colors"
           />
           {searchQuery && (
@@ -240,7 +277,7 @@ export default function AdminOfficersPage() {
         <select
           value={rankFilter}
           onChange={(e) => { setRankFilter(e.target.value); setPage(1); }}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 focus:outline-none transition-colors min-w-[160px]"
+          className="w-full sm:w-auto bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 focus:outline-none transition-colors sm:min-w-[160px]"
         >
           <option value="">All Ranks</option>
           {availableRanks.map((rank) => (
@@ -253,18 +290,17 @@ export default function AdminOfficersPage() {
         {paginated.map((officer) => (
           <div
             key={officer.id}
-            className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
+            className="flex items-center justify-between gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 sm:px-4 py-3"
           >
-            <div>
-              <p className="text-white font-medium">{officer.name}</p>
-              <p className="text-gray-500 text-xs">
-                {officer.rank}
-                {officer.title && ` — ${officer.title}`}
+            <div className="min-w-0">
+              <p className="text-white font-medium truncate">{officer.name}</p>
+              <p className="text-gray-500 text-xs truncate">
+                {getRanks(officer).join(", ") || "No rank assigned"}
                 {officer.servingSince && ` · Since ${officer.servingSince}`}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setEditing(officer)} className="text-gray-400 hover:text-white p-1">
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => setEditing({ ...officer, ranks: getRanks(officer) })} className="text-gray-400 hover:text-white p-1">
                 <Pencil size={16} />
               </button>
               <button onClick={() => handleDelete(officer.id)} className="text-gray-400 hover:text-red-400 p-1">

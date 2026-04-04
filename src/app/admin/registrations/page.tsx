@@ -77,7 +77,7 @@ export default function AdminRegistrationsPage() {
       <h1 className="text-2xl font-bold text-white mb-6">Registrations</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <p className="text-gray-500 text-xs">Total Orders</p>
           <p className="text-white text-2xl font-bold">{registrations.length}</p>

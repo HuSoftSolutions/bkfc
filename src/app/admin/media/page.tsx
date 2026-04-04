@@ -9,7 +9,7 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { getAppStorage } from "@/lib/firebase";
-import Image from "next/image";
+import LoadingImage from "@/components/LoadingImage";
 import { Upload, Trash2, Copy, Check, ImageIcon } from "lucide-react";
 import AdminPagination from "@/components/AdminPagination";
 
@@ -136,7 +136,7 @@ export default function AdminMediaPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           <ImageIcon size={24} />
           Media Library
@@ -226,7 +226,7 @@ export default function AdminMediaPage() {
                     : "border-gray-800 hover:border-gray-600"
                 }`}
               >
-                <Image
+                <LoadingImage
                   src={item.url}
                   alt={item.name}
                   fill

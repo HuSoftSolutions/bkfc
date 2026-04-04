@@ -15,6 +15,7 @@ import { ref, listAll, getDownloadURL, uploadBytes } from "firebase/storage";
 import { getDb, getAppStorage } from "@/lib/firebase";
 import { GalleryImage } from "@/types";
 import Image from "next/image";
+import LoadingImage from "@/components/LoadingImage";
 import {
   Trash2,
   ImageIcon,
@@ -28,6 +29,7 @@ const PER_PAGE = 20;
 
 export default function AdminGalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [showBulk, setShowBulk] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -44,12 +46,17 @@ export default function AdminGalleryPage() {
   const paginated = images.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const fetchGallery = useCallback(async () => {
-    const q = query(collection(getDb(), "gallery"), orderBy("order", "asc"));
-    const snap = await getDocs(q);
-    setImages(
-      snap.docs.map((d) => ({ id: d.id, ...d.data() })) as GalleryImage[]
-    );
-    setPage(1);
+    setLoading(true);
+    try {
+      const q = query(collection(getDb(), "gallery"), orderBy("order", "asc"));
+      const snap = await getDocs(q);
+      setImages(
+        snap.docs.map((d) => ({ id: d.id, ...d.data() })) as GalleryImage[]
+      );
+      setPage(1);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -177,7 +184,7 @@ export default function AdminGalleryPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           <ImageIcon size={24} />
           Gallery
@@ -217,7 +224,7 @@ export default function AdminGalleryPage() {
       {/* Bulk add from existing media */}
       {showBulk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <h2 className="text-lg font-bold text-white">
                 Add from Media Library
@@ -298,6 +305,13 @@ export default function AdminGalleryPage() {
       )}
 
       {/* Gallery list */}
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="aspect-square bg-gray-900 border border-gray-800 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {paginated.map((img) => (
           <div
@@ -305,7 +319,7 @@ export default function AdminGalleryPage() {
             className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group relative"
           >
             <div className="relative aspect-square">
-              <Image
+              <LoadingImage
                 src={img.url}
                 alt={img.caption || "Gallery"}
                 fill
@@ -357,8 +371,9 @@ export default function AdminGalleryPage() {
           </div>
         ))}
       </div>
+      )}
 
-      {images.length === 0 && (
+      {images.length === 0 && !loading && (
         <p className="text-gray-500 text-sm text-center py-12">
           No photos in the gallery yet. Upload or add from existing media.
         </p>

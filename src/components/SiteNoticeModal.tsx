@@ -19,6 +19,7 @@ export default function SiteNoticeModal() {
   const router = useRouter();
   const [notice, setNotice] = useState<NoticeData | null>(null);
   const [ready, setReady] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -56,20 +57,34 @@ export default function SiteNoticeModal() {
     loadNotice();
   }, []);
 
+  // Fade in after ready with a short delay so the page loads first
+  useEffect(() => {
+    if (!ready) return;
+    const timer = setTimeout(() => setVisible(true), 400);
+    return () => clearTimeout(timer);
+  }, [ready]);
+
   const handleDismiss = () => {
-    setDismissed(true);
-    sessionStorage.setItem("notice-dismissed", "1");
+    setVisible(false);
+    setTimeout(() => {
+      setDismissed(true);
+      sessionStorage.setItem("notice-dismissed", "1");
+    }, 300);
   };
 
   if (!notice || !ready || dismissed) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 transition-all duration-300 ${
+        visible ? "bg-black/50 backdrop-blur-sm" : "bg-black/0 pointer-events-none"
+      }`}
       onClick={handleDismiss}
     >
       <div
-        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300"
+        className={`bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden transition-all duration-300 ${
+          visible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close */}

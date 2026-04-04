@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import RecaptchaProvider from "@/components/RecaptchaProvider";
 import SiteNoticeModal from "@/components/SiteNoticeModal";
 import ActiveCallBanner from "@/components/ActiveCallBanner";
+import LayoutShell from "@/components/LayoutShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,9 +38,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-white text-gray-900">
         <RecaptchaProvider>
           <ActiveCallBanner />
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <LayoutShell>{children}</LayoutShell>
           <SiteNoticeModal />
         </RecaptchaProvider>
       </body>

@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Event, TicketOption } from "@/types";
-import { Plus, Pencil, Trash2, X, Eye, EyeOff, Ticket, Pin, PinOff } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Ticket, Pin, PinOff } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 import Link from "next/link";
 import AdminPagination from "@/components/AdminPagination";
@@ -143,18 +143,18 @@ export default function AdminEventsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-white">Manage Events</h1>
         <div className="flex items-center gap-2">
           <Link
             href="/admin/registrations"
-            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium px-3 sm:px-4 py-2 rounded-lg transition-colors"
           >
-            <Ticket size={16} /> Registrations
+            <Ticket size={16} /> <span className="hidden sm:inline">Registrations</span><span className="sm:hidden">Regs</span>
           </Link>
           <button
             onClick={() => setEditing({ ...emptyEvent })}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 sm:px-4 py-2 rounded-lg transition-colors"
           >
             <Plus size={16} /> New Event
           </button>
@@ -163,7 +163,7 @@ export default function AdminEventsPage() {
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-white">
                 {editing.id ? "Edit Event" : "New Event"}
@@ -182,7 +182,7 @@ export default function AdminEventsPage() {
                   className={inputClass}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Start Date</label>
                   <input type="date" value={editing.date || ""} onChange={(e) => setEditing({ ...editing, date: e.target.value })} className={inputClass} />
@@ -192,7 +192,7 @@ export default function AdminEventsPage() {
                   <input type="time" value={editing.time || ""} onChange={(e) => setEditing({ ...editing, time: e.target.value })} className={inputClass} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">End Date</label>
                   <input type="date" value={editing.endDate || ""} onChange={(e) => setEditing({ ...editing, endDate: e.target.value })} className={inputClass} />
@@ -260,7 +260,7 @@ export default function AdminEventsPage() {
                             <Trash2 size={14} />
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <label className="block text-[10px] text-gray-500 mb-0.5">Name *</label>
                             <input
@@ -283,7 +283,7 @@ export default function AdminEventsPage() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <label className="block text-[10px] text-gray-500 mb-0.5">Category</label>
                             <input
@@ -339,17 +339,12 @@ export default function AdminEventsPage() {
         {paginated.map((event) => (
           <div
             key={event.id}
-            className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
+            className="flex items-center justify-between gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 sm:px-4 py-3"
           >
-            <div className="flex items-center gap-3">
-              {event.published ? (
-                <Eye size={16} className="text-green-400" />
-              ) : (
-                <EyeOff size={16} className="text-gray-500" />
-              )}
-              <div>
+            <div className="min-w-0">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-white font-medium">{event.title}</p>
+                  <p className="text-white font-medium truncate">{event.title}</p>
                   {event.ticketingEnabled && (
                     <span className="bg-blue-600/20 text-blue-400 text-[10px] font-medium px-2 py-0.5 rounded-full">
                       Ticketed
@@ -362,7 +357,7 @@ export default function AdminEventsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => togglePin(event)}
                 className={`p-1 ${event.pinned ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}

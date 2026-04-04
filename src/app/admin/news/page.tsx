@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { NewsArticle } from "@/types";
-import { Plus, Pencil, Trash2, X, Eye, EyeOff, Pin, PinOff } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Pin, PinOff } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 import AdminPagination from "@/components/AdminPagination";
 
@@ -91,7 +91,7 @@ export default function AdminNewsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-white">Manage News</h1>
         <button
           onClick={() => setEditing({ ...emptyArticle })}
@@ -103,7 +103,7 @@ export default function AdminNewsPage() {
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-white">
                 {editing.id ? "Edit Article" : "New Article"}
@@ -190,20 +190,15 @@ export default function AdminNewsPage() {
         {paginated.map((article) => (
           <div
             key={article.id}
-            className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
+            className="flex items-center justify-between gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 sm:px-4 py-3"
           >
-            <div className="flex items-center gap-3">
-              {article.published ? (
-                <Eye size={16} className="text-green-400" />
-              ) : (
-                <EyeOff size={16} className="text-gray-500" />
-              )}
-              <div>
-                <p className="text-white font-medium">{article.title}</p>
+            <div className="min-w-0">
+              <div className="min-w-0">
+                <p className="text-white font-medium truncate">{article.title}</p>
                 <p className="text-gray-500 text-xs">{article.date}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => togglePin(article)}
                 className={`p-1 ${article.pinned ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}

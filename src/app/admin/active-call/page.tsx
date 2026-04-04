@@ -280,9 +280,9 @@ export default function AdminActiveCallPage() {
             return (
               <div
                 key={c.id}
-                className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 sm:px-4 py-3"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <span
                     className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${
                       isPending
@@ -304,7 +304,7 @@ export default function AdminActiveCallPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                   {isPending && (
                     <button
                       onClick={async () => {
@@ -341,14 +341,14 @@ export default function AdminActiveCallPage() {
       {/* Recent webhook logs */}
       <div className="mt-6">
         <h3 className="text-white font-semibold mb-4">Recent Dispatch Logs</h3>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
           {logs.length === 0 ? (
             <p className="text-gray-500 text-sm p-6 text-center">
               No dispatch logs yet. Logs appear here when the webhook receives
               data from IamResponding.
             </p>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3">Time</th>

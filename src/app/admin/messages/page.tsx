@@ -13,6 +13,7 @@ import {
 import { getDb } from "@/lib/firebase";
 import { Trash2, Mail, MailOpen } from "lucide-react";
 import AdminPagination from "@/components/AdminPagination";
+import { useAdminBadgeContext } from "@/lib/AdminBadgeContext";
 
 const PER_PAGE = 15;
 
@@ -30,6 +31,7 @@ export default function AdminMessagesPage() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [selected, setSelected] = useState<ContactMessage | null>(null);
   const [page, setPage] = useState(1);
+  const { refresh: refreshBadges } = useAdminBadgeContext();
 
   const totalPages = Math.ceil(messages.length / PER_PAGE);
   const paginated = messages.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -49,9 +51,12 @@ export default function AdminMessagesPage() {
   }, []);
 
   const markRead = async (msg: ContactMessage) => {
-    await updateDoc(doc(getDb(), "contactSubmissions", msg.id), { read: true });
-    setSelected(msg);
-    fetchMessages();
+    if (!msg.read) {
+      await updateDoc(doc(getDb(), "contactSubmissions", msg.id), { read: true });
+      fetchMessages();
+      refreshBadges();
+    }
+    setSelected({ ...msg, read: true });
   };
 
   const handleDelete = async (id: string) => {
@@ -116,7 +121,25 @@ export default function AdminMessagesPage() {
         {/* Detail */}
         {selected && (
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
-            <h3 className="text-white font-semibold text-lg mb-1">{selected.name}</h3>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-white font-semibold text-lg">{selected.name}</h3>
+              <button
+                onClick={async () => {
+                  const newRead = !selected.read;
+                  await updateDoc(doc(getDb(), "contactSubmissions", selected.id), { read: newRead });
+                  fetchMessages();
+                  refreshBadges();
+                  setSelected({ ...selected, read: newRead });
+                }}
+                className={`text-xs font-medium px-3 py-1 rounded-full ${
+                  selected.read
+                    ? "bg-gray-800 text-gray-400 hover:text-yellow-400"
+                    : "bg-green-900/50 text-green-400"
+                }`}
+              >
+                {selected.read ? "Mark Unread" : "Read"}
+              </button>
+            </div>
             <p className="text-gray-400 text-sm">{selected.email}</p>
             {selected.phone && (
               <p className="text-gray-400 text-sm">{selected.phone}</p>

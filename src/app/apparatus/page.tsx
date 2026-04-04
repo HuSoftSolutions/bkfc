@@ -64,12 +64,13 @@ export default function ApparatusPage() {
             className="bg-white border border-gray-200 rounded-xl overflow-hidden"
           >
             {unit.image && (
-              <div className="relative w-full h-64 md:h-96">
+              <div className="relative w-full">
                 <Image
                   src={unit.image}
                   alt={unit.name}
-                  fill
-                  className="object-cover"
+                  width={1200}
+                  height={800}
+                  className="w-full h-auto"
                 />
               </div>
             )}

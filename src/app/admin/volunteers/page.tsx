@@ -13,6 +13,7 @@ import {
 import { getDb } from "@/lib/firebase";
 import { Trash2, CheckCircle, Clock } from "lucide-react";
 import AdminPagination from "@/components/AdminPagination";
+import { useAdminBadgeContext } from "@/lib/AdminBadgeContext";
 
 const PER_PAGE = 15;
 
@@ -35,6 +36,7 @@ export default function AdminVolunteersPage() {
   const [apps, setApps] = useState<VolunteerApp[]>([]);
   const [selected, setSelected] = useState<VolunteerApp | null>(null);
   const [page, setPage] = useState(1);
+  const { refresh: refreshBadges } = useAdminBadgeContext();
 
   const totalPages = Math.ceil(apps.length / PER_PAGE);
   const paginated = apps.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -54,10 +56,15 @@ export default function AdminVolunteersPage() {
   }, []);
 
   const toggleReviewed = async (app: VolunteerApp) => {
+    const newReviewed = !app.reviewed;
     await updateDoc(doc(getDb(), "volunteerApplications", app.id), {
-      reviewed: !app.reviewed,
+      reviewed: newReviewed,
     });
     fetchApps();
+    refreshBadges();
+    if (selected?.id === app.id) {
+      setSelected({ ...selected, reviewed: newReviewed });
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -128,11 +135,11 @@ export default function AdminVolunteersPage() {
                 onClick={() => toggleReviewed(selected)}
                 className={`text-xs font-medium px-3 py-1 rounded-full ${
                   selected.reviewed
-                    ? "bg-green-900/50 text-green-400"
+                    ? "bg-green-900/50 text-green-400 hover:text-yellow-400"
                     : "bg-yellow-900/50 text-yellow-400"
                 }`}
               >
-                {selected.reviewed ? "Reviewed" : "Mark Reviewed"}
+                {selected.reviewed ? "Mark Unreviewed" : "Mark Reviewed"}
               </button>
             </div>
             <div className="space-y-2 text-sm text-gray-300">

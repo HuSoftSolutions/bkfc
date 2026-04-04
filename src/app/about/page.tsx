@@ -12,35 +12,53 @@ import { User } from "lucide-react";
 const RANK_ORDER = [
   "Chief",
   "Assistant Chief",
+  "2nd Assistant Chief",
+  "Fire Police Chief",
   "Captain",
   "Lieutenant",
   "Safety Officer",
   "Accountability Officer",
-  "Fire Police Chief",
   "President",
   "Vice President",
   "Treasurer",
   "Secretary",
   "Firefighter",
+  "Fire Police",
   "Probationary",
   "Junior Firefighter",
   "Administrative",
   "Honorary Member",
 ];
 
-function getRankGroup(rank: string): string {
-  // Some entries have combined ranks like "Lieutenant, Secretary"
-  const primary = rank.split(",")[0].trim();
-  for (const r of RANK_ORDER) {
-    if (primary.toLowerCase().includes(r.toLowerCase())) return r;
+/** Normalize legacy single-rank data to ranks array */
+function getMemberRanks(officer: Officer): string[] {
+  if (officer.ranks && officer.ranks.length > 0) return officer.ranks;
+  const parts: string[] = [];
+  if (officer.rank) {
+    officer.rank.split(",").forEach((r) => {
+      const trimmed = r.trim();
+      if (trimmed) parts.push(trimmed);
+    });
   }
-  return "Other";
+  if (officer.title) {
+    officer.title.split(",").forEach((t) => {
+      const trimmed = t.trim();
+      if (trimmed && !parts.includes(trimmed)) parts.push(trimmed);
+    });
+  }
+  return parts.length > 0 ? parts : ["Other"];
 }
 
-function getRankSortOrder(rank: string): number {
-  const group = getRankGroup(rank);
-  const idx = RANK_ORDER.indexOf(group);
-  return idx >= 0 ? idx : RANK_ORDER.length;
+/** Map a rank string to the closest RANK_ORDER entry */
+function matchRankGroup(rank: string): string {
+  const normalized = rank.toLowerCase();
+  if (normalized.includes("fire police chief")) return "Fire Police Chief";
+  if (normalized.includes("2nd assistant chief") || normalized.includes("2nd asst")) return "2nd Assistant Chief";
+  for (const r of RANK_ORDER) {
+    if (normalized.includes(r.toLowerCase())) return r;
+  }
+  if (normalized.includes("fire police")) return "Fire Police";
+  return "Other";
 }
 
 export default function AboutPage() {
@@ -64,24 +82,28 @@ export default function AboutPage() {
     fetchOfficers();
   }, []);
 
-  // Sort by rank hierarchy, then by order field
-  const sorted = [...officers].sort((a, b) => {
-    const rankDiff = getRankSortOrder(a.rank || a.title) - getRankSortOrder(b.rank || b.title);
-    if (rankDiff !== 0) return rankDiff;
-    return (a.order || 0) - (b.order || 0);
-  });
-
-  // Group by rank
-  const groups: { label: string; members: Officer[] }[] = [];
-  const seen = new Set<string>();
-  for (const member of sorted) {
-    const group = getRankGroup(member.rank || member.title);
-    if (!seen.has(group)) {
-      seen.add(group);
-      groups.push({ label: group, members: [] });
+  // Build groups: each member appears in every rank group they belong to
+  const groupMap = new Map<string, Officer[]>();
+  for (const member of officers) {
+    const ranks = getMemberRanks(member);
+    for (const rank of ranks) {
+      const group = matchRankGroup(rank);
+      if (!groupMap.has(group)) groupMap.set(group, []);
+      groupMap.get(group)!.push(member);
     }
-    groups.find((g) => g.label === group)?.members.push(member);
   }
+
+  // Sort groups by RANK_ORDER, then sort members within each group by order
+  const groups = [...groupMap.entries()]
+    .sort(([a], [b]) => {
+      const ai = RANK_ORDER.indexOf(a);
+      const bi = RANK_ORDER.indexOf(b);
+      return (ai >= 0 ? ai : RANK_ORDER.length) - (bi >= 0 ? bi : RANK_ORDER.length);
+    })
+    .map(([label, members]) => ({
+      label,
+      members: [...members].sort((a, b) => (a.order || 0) - (b.order || 0)),
+    }));
 
   return (
     <>
@@ -173,7 +195,7 @@ export default function AboutPage() {
             {groups.map((group) => (
               <div key={group.label}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">
-                  {group.label}s
+                  {group.label.endsWith("Police") || group.label.endsWith("s") ? group.label : `${group.label}s`}
                   <span className="text-gray-400 font-normal text-sm ml-2">
                     ({group.members.length})
                   </span>
@@ -181,7 +203,7 @@ export default function AboutPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {group.members.map((member) => (
                     <div
-                      key={member.id}
+                      key={`${group.label}-${member.id}`}
                       className="bg-white border border-gray-200 rounded-xl p-4 text-center"
                     >
                       {member.image ? (
@@ -201,9 +223,6 @@ export default function AboutPage() {
                       <h4 className="text-gray-900 font-semibold text-sm">
                         {member.name}
                       </h4>
-                      {member.title && member.title !== member.rank && (
-                        <p className="text-red-600 text-xs mt-0.5">{member.title}</p>
-                      )}
                       {member.servingSince && (
                         <p className="text-gray-400 text-xs mt-1">
                           Since {member.servingSince}
