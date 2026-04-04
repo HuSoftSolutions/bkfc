@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Menu, X, Phone } from "lucide-react";
 import WeatherWidget from "@/components/WeatherWidget";
 
@@ -27,13 +28,22 @@ export default function Navbar() {
   // Close mobile menu when route changes
   useEffect(() => {
     setOpen(false); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   return (
     <nav
@@ -101,43 +111,46 @@ export default function Navbar() {
       </div>
 
       {/* Mobile full-screen menu */}
-      {open && (
-        <div className="md:hidden fixed inset-0 top-0 z-50 bg-white flex flex-col">
-          {/* Header mirroring navbar */}
-          <div className="flex items-center justify-between px-4 h-16 border-b border-gray-100 shrink-0">
-            <Link href="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
-              <img src="/bkfc-patch.png" alt="BKFC" className="w-10 h-10 object-contain" />
-            </Link>
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
-              onClick={() => setOpen(false)}
-              aria-label="Close menu"
-            >
-              <X size={24} />
-            </button>
-          </div>
-
-          {/* Nav links */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="block py-3 px-4 text-lg font-medium text-gray-700 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all"
-
-              >
-                {link.label}
+      {typeof document !== "undefined" &&
+        open &&
+        createPortal(
+          <div className="md:hidden fixed inset-0 z-[70] bg-white flex flex-col">
+            {/* Header mirroring navbar */}
+            <div className="flex items-center justify-between px-4 h-16 border-b border-gray-100 shrink-0">
+              <Link href="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
+                <img src="/bkfc-patch.png" alt="BKFC" className="w-10 h-10 object-contain" />
               </Link>
-            ))}
-          </div>
+              <button
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                onClick={() => setOpen(false)}
+                aria-label="Close menu"
+              >
+                <X size={24} />
+              </button>
+            </div>
 
-          {/* Footer info */}
-          <div className="shrink-0 px-6 py-4 border-t border-gray-100 text-xs text-gray-400 space-y-1">
-            <p>Non-Emergency: (518) 736-2100</p>
-            <p>Station: (518) 883-3611</p>
-          </div>
-        </div>
-      )}
+            {/* Nav links */}
+            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="block py-3 px-4 text-lg font-medium text-gray-700 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all"
+                  onClick={() => setOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Footer info */}
+            <div className="shrink-0 px-6 py-4 border-t border-gray-100 text-xs text-gray-400 space-y-1">
+              <p>Non-Emergency: (518) 736-2100</p>
+              <p>Station: (518) 883-3611</p>
+            </div>
+          </div>,
+          document.body
+        )}
     </nav>
   );
 }
