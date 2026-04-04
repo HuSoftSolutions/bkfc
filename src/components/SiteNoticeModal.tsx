@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { X } from "lucide-react";
 
 interface NoticeData {
@@ -17,12 +17,14 @@ interface NoticeData {
 
 export default function SiteNoticeModal() {
   const router = useRouter();
+  const pathname = usePathname();
   const [notice, setNotice] = useState<NoticeData | null>(null);
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     if (sessionStorage.getItem("notice-dismissed")) return;
 
     async function loadNotice() {
