@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Event, TicketOption } from "@/types";
-import { Plus, Pencil, Trash2, X, Ticket, Pin, PinOff } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Ticket, Pin, PinOff, ImageIcon } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 import Link from "next/link";
 import AdminPagination from "@/components/AdminPagination";
@@ -341,7 +341,14 @@ export default function AdminEventsPage() {
             key={event.id}
             className="flex items-center justify-between gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 sm:px-4 py-3"
           >
-            <div className="min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-800 shrink-0 flex items-center justify-center">
+                {event.image ? (
+                  <img src={event.image} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon size={16} className="text-gray-600" />
+                )}
+              </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-white font-medium truncate">{event.title}</p>
