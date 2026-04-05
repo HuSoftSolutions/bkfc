@@ -6,7 +6,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { EventRegistration } from "@/types";
 import Link from "next/link";
-import { CheckCircle, Calendar, Mail } from "lucide-react";
+import { CheckCircle, Calendar, Mail, Download } from "lucide-react";
 import PrintReceipt from "@/components/PrintReceipt";
 
 export default function ConfirmationPage() {
@@ -138,8 +138,15 @@ function ConfirmationContent() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-        {registration && registrationId && (
+      {registration && registrationId && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-8 text-left">
+          <h3 className="font-bold text-red-900 mb-1 flex items-center gap-2">
+            <Download size={18} className="text-red-600" />
+            Save Your Receipt
+          </h3>
+          <p className="text-red-700 text-sm mb-4">
+            Your receipt is your proof of purchase. Save or print it now — you will need to present it at the event to claim your order.
+          </p>
           <PrintReceipt
             type="registration"
             receiptId={registrationId}
@@ -152,14 +159,15 @@ function ConfirmationContent() {
             paymentMethod={registration.paymentMethod}
             paymentStatus={registration.paymentStatus}
           />
-        )}
-        <Link
-          href={`/events/${eventId}`}
-          className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-medium transition-colors"
-        >
-          &larr; Back to Event
-        </Link>
-      </div>
+        </div>
+      )}
+
+      <Link
+        href={`/events/${eventId}`}
+        className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-medium transition-colors"
+      >
+        &larr; Back to Event
+      </Link>
     </div>
   );
 }

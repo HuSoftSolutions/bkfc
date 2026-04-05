@@ -160,10 +160,10 @@ export default function PrintReceipt(props: PrintReceiptProps) {
   return (
     <button
       onClick={handlePrint}
-      className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm px-5 py-2.5 rounded-xl transition-colors"
+      className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
     >
-      <Printer size={16} />
-      Print Receipt
+      <Printer size={18} />
+      Save / Print Receipt
     </button>
   );
 }
