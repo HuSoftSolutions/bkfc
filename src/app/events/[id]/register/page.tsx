@@ -27,7 +27,7 @@ export default function EventRegisterPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -77,8 +77,8 @@ export default function EventRegisterPage() {
 
   const handleSubmit = useCallback(
     async (payInPerson: boolean) => {
-      if (!form.name || !form.email) {
-        setError("Name and email are required.");
+      if (!form.firstName || !form.lastName || !form.email || !form.phone) {
+        setError("All fields are required.");
         return;
       }
       if (selectedItems.length === 0) {
@@ -96,7 +96,8 @@ export default function EventRegisterPage() {
           body: JSON.stringify({
             eventId,
             eventTitle: event?.title || "",
-            name: form.name,
+            firstName: form.firstName,
+            lastName: form.lastName,
             email: form.email,
             phone: form.phone,
             items: selectedItems,
@@ -309,12 +310,24 @@ export default function EventRegisterPage() {
               <h3 className="font-bold text-gray-900">Your Information</h3>
               <div>
                 <label className="block text-sm text-gray-500 mb-1">
-                  Name *
+                  First Name *
                 </label>
                 <input
-                  value={form.name}
+                  value={form.firstName}
                   onChange={(e) =>
-                    setForm({ ...form, name: e.target.value })
+                    setForm({ ...form, firstName: e.target.value })
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">
+                  Last Name *
+                </label>
+                <input
+                  value={form.lastName}
+                  onChange={(e) =>
+                    setForm({ ...form, lastName: e.target.value })
                   }
                   className={inputClass}
                 />
@@ -334,7 +347,7 @@ export default function EventRegisterPage() {
               </div>
               <div>
                 <label className="block text-sm text-gray-500 mb-1">
-                  Phone
+                  Phone *
                 </label>
                 <input
                   type="tel"

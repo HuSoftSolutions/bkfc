@@ -6,11 +6,13 @@ import { sendEmail, sendNotificationEmail } from "@/lib/email";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { eventId, eventTitle, name, email, phone, items, payInPerson } = body;
+    const { eventId, eventTitle, firstName, lastName, email, phone, items, payInPerson } = body;
 
-    if (!eventId || !name || !email || !items || items.length === 0) {
+    if (!eventId || !firstName || !lastName || !email || !phone || !items || items.length === 0) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const name = `${firstName} ${lastName}`.trim();
 
     const total = items.reduce(
       (sum: number, item: { quantity: number; price: number }) =>
@@ -37,11 +39,25 @@ export async function POST(req: NextRequest) {
 
       // Send emails for in-person registration
       try {
+        const itemsHtml = items
+          .map(
+            (item: { name: string; quantity: number; price: number }) =>
+              `<tr><td style="padding:4px 8px">${item.name} x${item.quantity}</td><td style="padding:4px 8px;text-align:right">$${(item.quantity * item.price).toFixed(2)}</td></tr>`
+          )
+          .join("");
+
         await sendEmail(
           email,
           `Registration Confirmed: ${eventTitle}`,
           `<h2>Registration Confirmed</h2>
           <p>You're registered for <strong>${eventTitle}</strong>.</p>
+          <table style="border-collapse:collapse;width:100%;max-width:400px">
+            ${itemsHtml}
+            <tr style="border-top:1px solid #ddd;font-weight:bold">
+              <td style="padding:8px">Total</td>
+              <td style="padding:8px;text-align:right">$${total.toFixed(2)}</td>
+            </tr>
+          </table>
           <p>Payment of <strong>$${total.toFixed(2)}</strong> is due in person at the event.</p>
           <p style="color:#666;font-size:14px;margin-top:16px">Broadalbin-Kennyetto Fire Company</p>`
         );

@@ -61,7 +61,7 @@ export default function EventDetailPage() {
         <div className="animate-pulse space-y-6">
           <div className="h-6 bg-gray-200 rounded w-32" />
           <div className="h-10 bg-gray-200 rounded w-3/4" />
-          <div className="h-80 bg-gray-200 rounded-2xl" />
+          <div className="aspect-video bg-gray-200 rounded-2xl" />
           <div className="h-4 bg-gray-200 rounded w-full" />
         </div>
       </div>
@@ -104,11 +104,11 @@ export default function EventDetailPage() {
 
       {/* Image */}
       {event.image && (
-        <div className="relative w-full rounded-2xl overflow-hidden mb-8">
+        <div className="w-full rounded-2xl overflow-hidden mb-8 bg-gray-100">
           <img
             src={event.image}
             alt={event.title}
-            className="w-full h-auto"
+            className="w-full h-auto block"
           />
         </div>
       )}

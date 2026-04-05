@@ -25,6 +25,7 @@ import {
   Radio,
   Menu,
   X,
+  Shield,
 } from "lucide-react";
 
 type BadgeKey = keyof AdminBadges;
@@ -53,6 +54,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/volunteers", label: "Volunteers", icon: UserPlus, badgeKey: "volunteers", badgeStyle: "alert" },
   { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
   { href: "/admin/media", label: "Media", icon: ImageIcon },
+  { href: "/admin/users", label: "Site Admins", icon: Shield },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
