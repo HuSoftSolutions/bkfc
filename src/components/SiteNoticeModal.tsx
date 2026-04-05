@@ -24,7 +24,7 @@ export default function SiteNoticeModal() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
+    if (pathname !== "/") return;
     if (sessionStorage.getItem("notice-dismissed")) return;
 
     async function loadNotice() {
