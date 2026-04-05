@@ -13,7 +13,8 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Event, TicketOption } from "@/types";
-import { Plus, Pencil, Trash2, X, Ticket, Pin, PinOff, ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Ticket, Pin, PinOff, ImageIcon, QrCode, Download } from "lucide-react";
+import QRCode from "qrcode";
 import MediaPicker from "@/components/MediaPicker";
 import Link from "next/link";
 import AdminPagination from "@/components/AdminPagination";
@@ -40,6 +41,8 @@ export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [editing, setEditing] = useState<Partial<Event> | null>(null);
   const [page, setPage] = useState(1);
+  const [qrEvent, setQrEvent] = useState<Event | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState("");
 
   const totalPages = Math.ceil(events.length / PER_PAGE);
   const paginated = events.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -136,6 +139,24 @@ export default function AdminEventsPage() {
     if (!confirm("Delete this event?")) return;
     await deleteDoc(doc(getDb(), "events", id));
     fetchEvents();
+  };
+
+  const showQr = async (event: Event) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const url = event.ticketingEnabled
+      ? `${origin}/events/${event.id}/register`
+      : `${origin}/events/${event.id}`;
+    const dataUrl = await QRCode.toDataURL(url, { width: 512, margin: 2 });
+    setQrDataUrl(dataUrl);
+    setQrEvent(event);
+  };
+
+  const downloadQr = () => {
+    if (!qrDataUrl || !qrEvent) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `qr-${qrEvent.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
+    a.click();
   };
 
   const inputClass =
@@ -366,6 +387,13 @@ export default function AdminEventsPage() {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button
+                onClick={() => showQr(event)}
+                className="text-gray-400 hover:text-white p-1"
+                title="QR Code"
+              >
+                <QrCode size={16} />
+              </button>
+              <button
                 onClick={() => togglePin(event)}
                 className={`p-1 ${event.pinned ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}
                 title={event.pinned ? "Unpin" : "Pin to top"}
@@ -386,6 +414,30 @@ export default function AdminEventsPage() {
         )}
       </div>
       <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+
+      {/* QR Code Modal */}
+      {qrEvent && qrDataUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setQrEvent(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">QR Code</h2>
+              <button onClick={() => setQrEvent(null)} className="text-gray-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-gray-400 text-sm mb-4 truncate">{qrEvent.title}</p>
+            <div className="bg-white rounded-xl p-4 inline-block mb-4">
+              <img src={qrDataUrl} alt="QR Code" className="w-48 h-48" />
+            </div>
+            <button
+              onClick={downloadQr}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+            >
+              <Download size={16} /> Download PNG
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
