@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "firebase/auth";
+import { signOut, sendPasswordResetEmail } from "firebase/auth";
 import { getAppAuth } from "@/lib/firebase";
 import AdminGuard from "@/components/AdminGuard";
 import { useState, useEffect } from "react";
@@ -26,6 +26,7 @@ import {
   Menu,
   X,
   Shield,
+  KeyRound,
 } from "lucide-react";
 
 type BadgeKey = keyof AdminBadges;
@@ -103,7 +104,24 @@ function NavLinks({ pathname, badges }: { pathname: string; badges: AdminBadges 
           );
         })}
       </nav>
-      <div className="mt-auto pt-4 border-t border-gray-800">
+      <div className="mt-auto pt-4 border-t border-gray-800 space-y-1">
+        <button
+          onClick={async () => {
+            const auth = getAppAuth();
+            const email = auth.currentUser?.email;
+            if (!email) return;
+            try {
+              await sendPasswordResetEmail(auth, email);
+              alert("Password reset email sent. Check your inbox.");
+            } catch {
+              alert("Failed to send reset email. Please try again.");
+            }
+          }}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors w-full"
+        >
+          <KeyRound size={18} />
+          Reset Password
+        </button>
         <button
           onClick={() => signOut(getAppAuth())}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors w-full"
@@ -228,8 +246,25 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            {/* Sign out */}
-            <div className="px-4 py-4 border-t border-gray-800 shrink-0">
+            {/* Account actions */}
+            <div className="px-4 py-4 border-t border-gray-800 shrink-0 space-y-2">
+              <button
+                onClick={async () => {
+                  const auth = getAppAuth();
+                  const email = auth.currentUser?.email;
+                  if (!email) return;
+                  try {
+                    await sendPasswordResetEmail(auth, email);
+                    alert("Password reset email sent. Check your inbox.");
+                  } catch {
+                    alert("Failed to send reset email. Please try again.");
+                  }
+                }}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 transition-colors"
+              >
+                <KeyRound size={16} />
+                Reset Password
+              </button>
               <button
                 onClick={() => signOut(getAppAuth())}
                 className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 transition-colors"
