@@ -210,7 +210,7 @@ export default function AdminRegistrationsPage() {
                       e.stopPropagation();
                       handleDelete(reg.id);
                     }}
-                    className="text-gray-500 hover:text-red-400 p-1"
+                    className="text-gray-500 hover:text-red-400 p-1 hidden"
                   >
                     <Trash2 size={14} />
                   </button>
