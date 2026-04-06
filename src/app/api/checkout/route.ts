@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { sendEmail, sendNotificationEmail } from "@/lib/email";
+import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,37 +37,34 @@ export async function POST(req: NextRequest) {
         createdAt: new Date().toISOString(),
       });
 
-      // Send emails for in-person registration
+      // Fetch event details for emails
+      let eventDate = "";
+      let eventTime = "";
+      let eventLocation = "";
       try {
-        const itemsHtml = items
-          .map(
-            (item: { name: string; quantity: number; price: number }) =>
-              `<tr><td style="padding:4px 8px">${item.name} x${item.quantity}</td><td style="padding:4px 8px;text-align:right">$${(item.quantity * item.price).toFixed(2)}</td></tr>`
-          )
-          .join("");
+        const eventSnap = await db.collection("events").doc(eventId).get();
+        if (eventSnap.exists) {
+          const eventData = eventSnap.data()!;
+          eventDate = eventData.date || "";
+          eventTime = eventData.time || "";
+          eventLocation = eventData.location || "";
+        }
+      } catch { /* non-critical */ }
 
-        await sendEmail(
-          email,
-          `Registration Confirmed: ${eventTitle}`,
-          `<h2>Registration Confirmed</h2>
-          <p>You're registered for <strong>${eventTitle}</strong>.</p>
-          <table style="border-collapse:collapse;width:100%;max-width:400px">
-            ${itemsHtml}
-            <tr style="border-top:1px solid #ddd;font-weight:bold">
-              <td style="padding:8px">Total</td>
-              <td style="padding:8px;text-align:right">$${total.toFixed(2)}</td>
-            </tr>
-          </table>
-          <p>Payment of <strong>$${total.toFixed(2)}</strong> is due in person at the event.</p>
-          <p style="color:#666;font-size:14px;margin-top:16px">Broadalbin-Kennyetto Fire Company</p>`
-        );
+      const emailData = {
+        name, email, phone: phone || "", eventTitle,
+        eventDate, eventTime, eventLocation,
+        items, total,
+        paymentMethod: "in-person" as const,
+        paymentStatus: "pending" as const,
+        registrationId: reg.id,
+      };
+
+      try {
+        await sendEmail(email, `Registration Confirmed: ${eventTitle}`, buildCustomerReceiptHtml(emailData));
         await sendNotificationEmail(
           `New Registration (Pay In Person): ${name} — ${eventTitle}`,
-          `<h2>New In-Person Registration</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Event:</strong> ${eventTitle}</p>
-          <p><strong>Total Due:</strong> $${total.toFixed(2)}</p>`,
+          buildAdminNotificationHtml(emailData),
           "registration"
         );
       } catch {

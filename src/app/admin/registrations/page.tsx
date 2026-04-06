@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { EventRegistration } from "@/types";
-import { Trash2, CheckCircle, Clock, CreditCard, Banknote } from "lucide-react";
+import { Trash2, CheckCircle, Clock, CreditCard, Banknote, Download } from "lucide-react";
 import AdminPagination from "@/components/AdminPagination";
 
 const PER_PAGE = 15;
@@ -21,6 +21,9 @@ export default function AdminRegistrationsPage() {
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [selected, setSelected] = useState<EventRegistration | null>(null);
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
+  const [eventFilter, setEventFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
 
   async function fetchRegistrations() {
@@ -56,13 +59,49 @@ export default function AdminRegistrationsPage() {
     fetchRegistrations();
   };
 
-  const filtered =
-    filter === "all"
-      ? registrations
-      : registrations.filter((r) => r.paymentStatus === filter);
+  const eventTitles = [...new Set(registrations.map((r) => r.eventTitle))].sort();
+
+  const filtered = registrations.filter((r) => {
+    if (filter !== "all" && r.paymentStatus !== filter) return false;
+    if (eventFilter && r.eventTitle !== eventFilter) return false;
+    const regDate = r.createdAt.split("T")[0];
+    if (dateFrom && regDate < dateFrom) return false;
+    if (dateTo && regDate > dateTo) return false;
+    return true;
+  });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  const exportCsv = () => {
+    const rows = filtered.map((r) => ({
+      Name: r.name,
+      Email: r.email,
+      Phone: r.phone || "",
+      Event: r.eventTitle,
+      Items: r.items.map((i) => `${i.name} x${i.quantity}`).join("; "),
+      Total: `$${r.total.toFixed(2)}`,
+      Payment: r.paymentMethod === "stripe" ? "Card" : "In Person",
+      Status: r.paymentStatus,
+      Date: new Date(r.createdAt).toLocaleDateString(),
+    }));
+
+    const headers = Object.keys(rows[0] || {});
+    const csv = [
+      headers.join(","),
+      ...rows.map((row) =>
+        headers.map((h) => `"${String(row[h as keyof typeof row]).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `registrations${eventFilter ? `-${eventFilter.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : ""}${dateFrom ? `-from-${dateFrom}` : ""}${dateTo ? `-to-${dateTo}` : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const totalRevenue = registrations
     .filter((r) => r.paymentStatus === "paid")
@@ -92,21 +131,54 @@ export default function AdminRegistrationsPage() {
         </div>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2 mb-4">
-        {(["all", "paid", "pending"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => { setFilter(f); setPage(1); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
-              filter === f
-                ? "bg-red-600/20 text-red-400"
-                : "bg-gray-800 text-gray-400 hover:text-white"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex gap-2">
+          {(["all", "paid", "pending"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => { setFilter(f); setPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
+                filter === f
+                  ? "bg-red-600/20 text-red-400"
+                  : "bg-gray-800 text-gray-400 hover:text-white"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <select
+          value={eventFilter}
+          onChange={(e) => { setEventFilter(e.target.value); setPage(1); }}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:border-red-500 focus:outline-none"
+        >
+          <option value="">All Events</option>
+          {eventTitles.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+          placeholder="From"
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:border-red-500 focus:outline-none"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+          placeholder="To"
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:border-red-500 focus:outline-none"
+        />
+        <button
+          onClick={exportCsv}
+          disabled={filtered.length === 0}
+          className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ml-auto"
+        >
+          <Download size={14} /> Export CSV ({filtered.length})
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

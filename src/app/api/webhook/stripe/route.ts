@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { sendEmail, sendNotificationEmail } from "@/lib/email";
+import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -72,27 +72,38 @@ export async function POST(req: NextRequest) {
         const regSnap = await db.collection("registrations").doc(registrationId).get();
         if (regSnap.exists) {
           const reg = regSnap.data()!;
-          const itemsHtml = reg.items
-            .map(
-              (item: { name: string; quantity: number; price: number }) =>
-                `<tr><td style="padding:4px 8px">${item.name} x${item.quantity}</td><td style="padding:4px 8px;text-align:right">$${(item.quantity * item.price).toFixed(2)}</td></tr>`
-            )
-            .join("");
 
-          const receiptHtml = `
-            <h2>Payment Confirmed</h2>
-            <p>Thank you for your registration for <strong>${reg.eventTitle}</strong>!</p>
-            <table style="border-collapse:collapse;width:100%;max-width:400px">
-              ${itemsHtml}
-              <tr style="border-top:1px solid #ddd;font-weight:bold">
-                <td style="padding:8px">Total</td>
-                <td style="padding:8px;text-align:right">$${reg.total.toFixed(2)}</td>
-              </tr>
-            </table>
-            <p style="color:#666;font-size:14px;margin-top:16px">Broadalbin-Kennyetto Fire Company</p>`;
+          // Fetch event details
+          let eventDate = "";
+          let eventTime = "";
+          let eventLocation = "";
+          try {
+            const eventSnap = await db.collection("events").doc(reg.eventId).get();
+            if (eventSnap.exists) {
+              const eventData = eventSnap.data()!;
+              eventDate = eventData.date || "";
+              eventTime = eventData.time || "";
+              eventLocation = eventData.location || "";
+            }
+          } catch { /* non-critical */ }
+
+          const emailData = {
+            name: reg.name,
+            email: reg.email,
+            phone: reg.phone || "",
+            eventTitle: reg.eventTitle,
+            eventDate,
+            eventTime,
+            eventLocation,
+            items: reg.items,
+            total: reg.total,
+            paymentMethod: "stripe" as const,
+            paymentStatus: "paid" as const,
+            registrationId,
+          };
 
           try {
-            await sendEmail(reg.email, `Registration Confirmed: ${reg.eventTitle}`, receiptHtml);
+            await sendEmail(reg.email, `Registration Confirmed: ${reg.eventTitle}`, buildCustomerReceiptHtml(emailData));
           } catch {
             console.error("Failed to send customer receipt");
           }
@@ -100,11 +111,7 @@ export async function POST(req: NextRequest) {
           try {
             await sendNotificationEmail(
               `Payment Received: ${reg.name} — ${reg.eventTitle}`,
-              `<h2>New Payment Received</h2>
-              <p><strong>Name:</strong> ${reg.name}</p>
-              <p><strong>Email:</strong> ${reg.email}</p>
-              <p><strong>Event:</strong> ${reg.eventTitle}</p>
-              <p><strong>Total:</strong> $${reg.total.toFixed(2)}</p>`,
+              buildAdminNotificationHtml(emailData),
               "registration"
             );
           } catch {
