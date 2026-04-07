@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { EventRegistration } from "@/types";
 import Link from "next/link";
@@ -28,27 +28,42 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
   const eventId = params.id as string;
   const registrationId = searchParams.get("registration");
+  const sessionId = searchParams.get("session");
 
   const [registration, setRegistration] = useState<EventRegistration | null>(
     null
   );
+  const [resolvedRegId, setResolvedRegId] = useState<string | null>(registrationId);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchReg() {
-      if (!registrationId) {
+      if (!registrationId && !sessionId) {
         setLoading(false);
         return;
       }
       try {
-        const snap = await getDoc(
-          doc(getDb(), "registrations", registrationId)
-        );
-        if (snap.exists()) {
-          setRegistration({
-            id: snap.id,
-            ...snap.data(),
-          } as EventRegistration);
+        if (registrationId) {
+          // Direct lookup (in-person registrations)
+          const snap = await getDoc(
+            doc(getDb(), "registrations", registrationId)
+          );
+          if (snap.exists()) {
+            setRegistration({ id: snap.id, ...snap.data() } as EventRegistration);
+            setResolvedRegId(snap.id);
+          }
+        } else if (sessionId) {
+          // Lookup by Stripe session ID (card payments)
+          const q = query(
+            collection(getDb(), "registrations"),
+            where("stripeSessionId", "==", sessionId)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const d = snap.docs[0];
+            setRegistration({ id: d.id, ...d.data() } as EventRegistration);
+            setResolvedRegId(d.id);
+          }
         }
       } catch (err) {
         console.error("Error:", err);
@@ -57,7 +72,7 @@ function ConfirmationContent() {
       }
     }
     fetchReg();
-  }, [registrationId]);
+  }, [registrationId, sessionId]);
 
   if (loading) {
     return (
@@ -138,7 +153,7 @@ function ConfirmationContent() {
         </div>
       )}
 
-      {registration && registrationId && (
+      {registration && resolvedRegId && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-8 text-left">
           <h3 className="font-bold text-red-900 mb-1 flex items-center gap-2">
             <Download size={18} className="text-red-600" />
@@ -149,7 +164,7 @@ function ConfirmationContent() {
           </p>
           <PrintReceipt
             type="registration"
-            receiptId={registrationId}
+            receiptId={resolvedRegId}
             date={registration.createdAt}
             name={registration.name}
             email={registration.email}

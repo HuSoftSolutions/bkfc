@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const donationId = session.metadata?.donationId;
-      const registrationId = session.metadata?.registrationId;
 
       // Handle donation
       if (donationId && session.metadata?.type === "donation") {
@@ -60,63 +59,82 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Handle event registration
+      // Handle legacy sessions that pre-created a registration
+      const registrationId = session.metadata?.registrationId;
       if (registrationId) {
         const db = getAdminDb();
         await db.collection("registrations").doc(registrationId).update({
           paymentStatus: "paid",
           stripeSessionId: session.id,
         });
+      }
 
-        // Send confirmation emails
-        const regSnap = await db.collection("registrations").doc(registrationId).get();
-        if (regSnap.exists) {
-          const reg = regSnap.data()!;
+      // Handle event registration — registration is created here on
+      // successful payment so abandoned checkouts never persist.
+      const meta = session.metadata || {};
+      if (!registrationId && meta.eventId && meta.name) {
+        const db = getAdminDb();
+        const email = session.customer_email || "";
+        const items = JSON.parse(meta.items || "[]");
+        const total = parseFloat(meta.total || "0");
 
-          // Fetch event details
-          let eventDate = "";
-          let eventTime = "";
-          let eventLocation = "";
-          try {
-            const eventSnap = await db.collection("events").doc(reg.eventId).get();
-            if (eventSnap.exists) {
-              const eventData = eventSnap.data()!;
-              eventDate = eventData.date || "";
-              eventTime = eventData.time || "";
-              eventLocation = eventData.location || "";
-            }
-          } catch { /* non-critical */ }
+        const regRef = await db.collection("registrations").add({
+          eventId: meta.eventId,
+          eventTitle: meta.eventTitle || "",
+          name: meta.name,
+          email,
+          phone: meta.phone || "",
+          items,
+          total,
+          paymentMethod: "stripe",
+          paymentStatus: "paid",
+          stripeSessionId: session.id,
+          createdAt: new Date().toISOString(),
+        });
 
-          const emailData = {
-            name: reg.name,
-            email: reg.email,
-            phone: reg.phone || "",
-            eventTitle: reg.eventTitle,
-            eventDate,
-            eventTime,
-            eventLocation,
-            items: reg.items,
-            total: reg.total,
-            paymentMethod: "stripe" as const,
-            paymentStatus: "paid" as const,
-            registrationId,
-          };
-
-          try {
-            await sendEmail(reg.email, `Registration Confirmed: ${reg.eventTitle}`, buildCustomerReceiptHtml(emailData));
-          } catch {
-            console.error("Failed to send customer receipt");
+        // Fetch event details for emails
+        let eventDate = "";
+        let eventTime = "";
+        let eventLocation = "";
+        try {
+          const eventSnap = await db.collection("events").doc(meta.eventId).get();
+          if (eventSnap.exists) {
+            const eventData = eventSnap.data()!;
+            eventDate = eventData.date || "";
+            eventTime = eventData.time || "";
+            eventLocation = eventData.location || "";
           }
+        } catch { /* non-critical */ }
 
-          try {
-            await sendNotificationEmail(
-              `Payment Received: ${reg.name} — ${reg.eventTitle}`,
-              buildAdminNotificationHtml(emailData),
-              "registration"
-            );
-          } catch {
-            console.error("Failed to send admin notification");
-          }
+        const emailData = {
+          name: meta.name,
+          email,
+          phone: meta.phone || "",
+          eventTitle: meta.eventTitle || "",
+          eventDate,
+          eventTime,
+          eventLocation,
+          items,
+          total,
+          paymentMethod: "stripe" as const,
+          paymentStatus: "paid" as const,
+          registrationId: regRef.id,
+        };
+
+        try {
+          await sendEmail(email, `Registration Confirmed: ${meta.eventTitle}`, buildCustomerReceiptHtml(emailData));
+        } catch {
+          console.error("Failed to send customer receipt");
+        }
+
+        try {
+          await sendNotificationEmail(
+            `Payment Received: ${meta.name} — ${meta.eventTitle}`,
+            buildAdminNotificationHtml(emailData),
+            "registration"
+          );
+        } catch {
+          console.error("Failed to send admin notification");
         }
       }
     }

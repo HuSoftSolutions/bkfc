@@ -74,7 +74,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, registrationId: reg.id });
     }
 
-    // Create Stripe checkout session
+    // Create Stripe checkout session — registration is created in the
+    // webhook once payment is confirmed so abandoned checkouts don't
+    // leave orphaned pending records.
     const stripe = getStripe();
 
     const lineItems = items.map(
@@ -90,36 +92,21 @@ export async function POST(req: NextRequest) {
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
 
-    // Save registration first with pending status
-    const reg = await db.collection("registrations").add({
-      eventId,
-      eventTitle,
-      name,
-      email,
-      phone: phone || "",
-      items,
-      total,
-      paymentMethod: "stripe",
-      paymentStatus: "pending",
-      createdAt: new Date().toISOString(),
-    });
-
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
       customer_email: email,
       metadata: {
-        registrationId: reg.id,
         eventId,
+        eventTitle,
+        name,
+        phone: phone || "",
+        items: JSON.stringify(items),
+        total: String(total),
       },
-      success_url: `${origin}/events/${eventId}/confirmation?registration=${reg.id}`,
+      success_url: `${origin}/events/${eventId}/confirmation?session={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/events/${eventId}`,
-    });
-
-    // Update registration with stripe session ID
-    await db.collection("registrations").doc(reg.id).update({
-      stripeSessionId: session.id,
     });
 
     return NextResponse.json({ url: session.url });

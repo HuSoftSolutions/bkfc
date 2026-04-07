@@ -5,6 +5,7 @@ import RecaptchaProvider from "@/components/RecaptchaProvider";
 import SiteNoticeModal from "@/components/SiteNoticeModal";
 import ActiveCallBanner from "@/components/ActiveCallBanner";
 import LayoutShell from "@/components/LayoutShell";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
           <ActiveCallBanner />
           <LayoutShell>{children}</LayoutShell>
           <SiteNoticeModal />
+          <Analytics />
         </RecaptchaProvider>
       </body>
     </html>
