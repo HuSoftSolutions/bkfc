@@ -153,14 +153,19 @@ function ConfirmationContent() {
         </div>
       )}
 
+      {registration && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-4 text-left flex items-start gap-3">
+          <Mail size={18} className="text-green-600 mt-0.5 shrink-0" />
+          <p className="text-green-800 text-sm">
+            A confirmation email has been sent to <span className="font-medium">{registration.email}</span>. Please check your inbox for your receipt.
+          </p>
+        </div>
+      )}
+
       {registration && resolvedRegId && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-8 text-left">
-          <h3 className="font-bold text-red-900 mb-1 flex items-center gap-2">
-            <Download size={18} className="text-red-600" />
-            Save Your Receipt
-          </h3>
-          <p className="text-red-700 text-sm mb-4">
-            Your receipt is your proof of purchase. Save or print it now — you will need to present it at the event to claim your order.
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-8 text-left">
+          <p className="text-gray-600 text-sm mb-4">
+            You can also save or screenshot this page for your records.
           </p>
           <PrintReceipt
             type="registration"
