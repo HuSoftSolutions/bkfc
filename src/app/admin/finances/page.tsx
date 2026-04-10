@@ -188,24 +188,30 @@ export default function AdminFinancesPage() {
 
       {/* Date Range */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:border-red-500 focus:outline-none"
-        />
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:border-red-500 focus:outline-none"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-gray-500 text-xs">From</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:border-red-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-gray-500 text-xs">To</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:border-red-500 focus:outline-none"
+          />
+        </div>
         {(dateFrom || dateTo) && (
           <button
             onClick={() => { setDateFrom(""); setDateTo(""); }}
-            className="text-gray-400 hover:text-white text-xs px-2"
+            className="text-gray-400 hover:text-white text-xs px-2 self-end pb-1.5"
           >
-            Clear dates
+            Clear
           </button>
         )}
       </div>
