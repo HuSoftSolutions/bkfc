@@ -148,6 +148,13 @@ export async function POST(req: NextRequest) {
       }
 
       if (!authorized) {
+        console.log("[IAR DEBUG] Auth failed", {
+          authHeader: authHeader ? authHeader.slice(0, 10) + "..." : "(empty)",
+          hasQuerySecret: !!querySecret,
+          secretLength: secret.length,
+          isBasic: authHeader.startsWith("Basic "),
+          decoded: authHeader.startsWith("Basic ") ? (() => { try { return atob(authHeader.slice(6)); } catch { return "invalid-base64"; } })() : null,
+        });
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
