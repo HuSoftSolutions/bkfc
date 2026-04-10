@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import Link from "next/link";
 import { Heart, CheckCircle } from "lucide-react";
@@ -33,19 +33,35 @@ export default function ThankYouPage() {
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const donationId = searchParams.get("donation");
+  const sessionId = searchParams.get("session");
   const [donation, setDonation] = useState<DonationData | null>(null);
+  const [resolvedDonationId, setResolvedDonationId] = useState<string | null>(donationId);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchDonation() {
-      if (!donationId) {
+      if (!donationId && !sessionId) {
         setLoading(false);
         return;
       }
       try {
-        const snap = await getDoc(doc(getDb(), "donations", donationId));
-        if (snap.exists()) {
-          setDonation(snap.data() as DonationData);
+        if (donationId) {
+          const snap = await getDoc(doc(getDb(), "donations", donationId));
+          if (snap.exists()) {
+            setDonation(snap.data() as DonationData);
+            setResolvedDonationId(snap.id);
+          }
+        } else if (sessionId) {
+          const q = query(
+            collection(getDb(), "donations"),
+            where("stripeSessionId", "==", sessionId)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const d = snap.docs[0];
+            setDonation(d.data() as DonationData);
+            setResolvedDonationId(d.id);
+          }
         }
       } catch {
         // ok
@@ -54,7 +70,7 @@ function ThankYouContent() {
       }
     }
     fetchDonation();
-  }, [donationId]);
+  }, [donationId, sessionId]);
 
   if (loading) {
     return (
@@ -94,11 +110,11 @@ function ThankYouContent() {
         </p>
       </div>
 
-      {donation && donationId && (
+      {donation && resolvedDonationId && (
         <div className="mb-6">
           <PrintReceipt
             type="donation"
-            receiptId={donationId}
+            receiptId={resolvedDonationId}
             date={donation.createdAt}
             name={donation.name}
             email={donation.email}

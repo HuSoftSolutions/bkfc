@@ -25,17 +25,17 @@ export async function POST(req: NextRequest) {
       const session = event.data.object;
       const donationId = session.metadata?.donationId;
 
-      // Handle donation
+      // Handle legacy donation sessions that pre-created a record
       if (donationId && session.metadata?.type === "donation") {
         const db = getAdminDb();
+        await db.collection("donations").doc(donationId).update({
+          paymentStatus: "paid",
+          stripeSessionId: session.id,
+        });
+
         const donSnap = await db.collection("donations").doc(donationId).get();
         if (donSnap.exists) {
           const don = donSnap.data()!;
-          await db.collection("donations").doc(donationId).update({
-            paymentStatus: "paid",
-            stripeSessionId: session.id,
-          });
-
           try {
             await sendEmail(
               don.email,
@@ -56,6 +56,44 @@ export async function POST(req: NextRequest) {
           } catch {
             console.error("Failed to send donation emails");
           }
+        }
+      }
+
+      // Handle new donation sessions — record created here on successful payment
+      if (!donationId && session.metadata?.type === "donation") {
+        const db = getAdminDb();
+        const donName = session.metadata.name || "Anonymous";
+        const donEmail = session.customer_email || "";
+        const donAmount = parseFloat(session.metadata.amount || "0");
+
+        await db.collection("donations").add({
+          amount: donAmount,
+          name: donName,
+          email: donEmail,
+          paymentStatus: "paid",
+          stripeSessionId: session.id,
+          createdAt: new Date().toISOString(),
+        });
+
+        try {
+          await sendEmail(
+            donEmail,
+            "Thank You for Your Donation — BKFC",
+            `<h2>Thank You for Your Donation!</h2>
+            <p>Your generous donation of <strong>$${donAmount.toFixed(2)}</strong> to the Broadalbin-Kennyetto Fire Company has been received.</p>
+            <p>Your support helps us maintain equipment, fund training, and continue protecting our community.</p>
+            <p style="color:#666;font-size:14px;margin-top:16px">Broadalbin-Kennyetto Fire Company<br>14 Pine Street, Broadalbin, NY 12025</p>`
+          );
+          await sendNotificationEmail(
+            `Donation Received: $${donAmount.toFixed(2)} from ${donName}`,
+            `<h2>New Donation Received</h2>
+            <p><strong>Name:</strong> ${donName}</p>
+            <p><strong>Email:</strong> ${donEmail}</p>
+            <p><strong>Amount:</strong> $${donAmount.toFixed(2)}</p>`,
+            "donation"
+          );
+        } catch {
+          console.error("Failed to send donation emails");
         }
       }
 

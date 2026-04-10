@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { getAdminDb } from "@/lib/firebaseAdmin";
-import { sendEmail, sendNotificationEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,20 +13,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const db = getAdminDb();
     const stripe = getStripe();
     const origin = req.headers.get("origin") || "http://localhost:3000";
 
-    // Save donation record
-    const donation = await db.collection("donations").add({
-      amount,
-      name: name || "Anonymous",
-      email,
-      paymentStatus: "pending",
-      createdAt: new Date().toISOString(),
-    });
-
-    // Create Stripe checkout session
+    // Create Stripe checkout session — donation record is created in the
+    // webhook once payment is confirmed so abandoned checkouts don't
+    // leave orphaned pending records.
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -47,15 +37,12 @@ export async function POST(req: NextRequest) {
       mode: "payment",
       customer_email: email,
       metadata: {
-        donationId: donation.id,
         type: "donation",
+        name: name || "Anonymous",
+        amount: String(amount),
       },
-      success_url: `${origin}/donate/thank-you?donation=${donation.id}`,
+      success_url: `${origin}/donate/thank-you?session={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/donate`,
-    });
-
-    await db.collection("donations").doc(donation.id).update({
-      stripeSessionId: session.id,
     });
 
     return NextResponse.json({ url: session.url });
