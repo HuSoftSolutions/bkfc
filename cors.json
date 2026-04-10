@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["http://localhost:3000", "https://your-production-domain.com"],
+    "origin": ["http://localhost:3000", "https://broadalbinfire.com", "https://www.broadalbinfire.com"],
     "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
     "maxAgeSeconds": 3600,
     "responseHeader": ["Content-Type", "Authorization", "Content-Length", "User-Agent", "x-goog-resumable"]
