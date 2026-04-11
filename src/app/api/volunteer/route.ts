@@ -27,14 +27,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (recaptchaToken) {
-      const valid = await verifyRecaptcha(recaptchaToken);
-      if (!valid) {
-        return NextResponse.json(
-          { error: "reCAPTCHA verification failed" },
-          { status: 400 }
-        );
-      }
+    if (!recaptchaToken) {
+      return NextResponse.json(
+        { error: "reCAPTCHA token required" },
+        { status: 400 }
+      );
+    }
+
+    const valid = await verifyRecaptcha(recaptchaToken);
+    if (!valid) {
+      return NextResponse.json(
+        { error: "reCAPTCHA verification failed" },
+        { status: 400 }
+      );
     }
 
     const adminDb = getAdminDb();
