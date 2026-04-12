@@ -12,7 +12,8 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { EventRegistration } from "@/types";
-import { Trash2, CheckCircle, Clock, CreditCard, Banknote, Download } from "lucide-react";
+import { Trash2, CheckCircle, Clock, CreditCard, Banknote, Download, Printer, Send } from "lucide-react";
+import PrintReceipt from "@/components/PrintReceipt";
 import AdminPagination from "@/components/AdminPagination";
 
 const PER_PAGE = 15;
@@ -57,6 +58,28 @@ export default function AdminRegistrationsPage() {
     await deleteDoc(doc(getDb(), "registrations", id));
     if (selected?.id === id) setSelected(null);
     fetchRegistrations();
+  };
+
+  const [resending, setResending] = useState(false);
+
+  const resendReceipt = async (id: string) => {
+    setResending(true);
+    try {
+      const res = await fetch("/api/admin/resend-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registrationId: id }),
+      });
+      if (res.ok) {
+        alert("Receipt email sent!");
+      } else {
+        alert("Failed to send email.");
+      }
+    } catch {
+      alert("Failed to send email.");
+    } finally {
+      setResending(false);
+    }
   };
 
   const eventTitles = [...new Set(registrations.map((r) => r.eventTitle))].sort();
@@ -294,6 +317,29 @@ export default function AdminRegistrationsPage() {
                   <span className="text-white">${selected.total.toFixed(2)}</span>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-800 flex flex-wrap gap-2">
+              <PrintReceipt
+                type="registration"
+                receiptId={selected.id}
+                date={selected.createdAt}
+                name={selected.name}
+                email={selected.email}
+                eventTitle={selected.eventTitle}
+                items={selected.items}
+                total={selected.total}
+                paymentMethod={selected.paymentMethod}
+                paymentStatus={selected.paymentStatus}
+              />
+              <button
+                onClick={() => resendReceipt(selected.id)}
+                disabled={resending}
+                className="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition-colors"
+              >
+                <Send size={14} />
+                {resending ? "Sending..." : "Resend Email"}
+              </button>
             </div>
           </div>
         )}
