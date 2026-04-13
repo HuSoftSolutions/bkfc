@@ -6,7 +6,7 @@ import { getDb } from "@/lib/firebase";
 import { Officer } from "@/types";
 import Hero from "@/components/Hero";
 import Image from "next/image";
-import { User, MapPin, ExternalLink, Download } from "lucide-react";
+import { User, ExternalLink, Download, X } from "lucide-react";
 
 // Group members by rank for display
 const RANK_ORDER = [
@@ -64,6 +64,7 @@ function matchRankGroup(rank: string): string {
 export default function AboutPage() {
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mapOpen, setMapOpen] = useState(false);
 
   useEffect(() => {
     async function fetchOfficers() {
@@ -185,7 +186,10 @@ export default function AboutPage() {
             County, New York, including the communities of Broadalbin, Vail Mills,
             North Broadalbin, and Hagedorns Mills.
           </p>
-          <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+          <button
+            onClick={() => setMapOpen(true)}
+            className="border border-gray-200 rounded-xl overflow-hidden bg-white block w-full cursor-zoom-in hover:shadow-lg transition-shadow"
+          >
             <Image
               src="/broadalbin-fire-district-map.png"
               alt="Broadalbin Fire District Map"
@@ -194,7 +198,34 @@ export default function AboutPage() {
               className="w-full h-auto"
               priority={false}
             />
-          </div>
+          </button>
+
+          {mapOpen && (
+            <div
+              className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+              onClick={() => setMapOpen(false)}
+            >
+              <button
+                onClick={() => setMapOpen(false)}
+                className="absolute top-4 right-4 text-white/70 hover:text-white z-10"
+              >
+                <X size={28} />
+              </button>
+              <div
+                className="relative max-w-[95vw] max-h-[90vh] overflow-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Image
+                  src="/broadalbin-fire-district-map.png"
+                  alt="Broadalbin Fire District Map"
+                  width={3600}
+                  height={2400}
+                  className="w-auto h-auto max-h-[90vh]"
+                  priority
+                />
+              </div>
+            </div>
+          )}
           <div className="flex gap-4 mt-4">
             <a
               href="/Broadalbin_Fire_District.pdf"
