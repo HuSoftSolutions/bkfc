@@ -6,7 +6,7 @@ import { getDb } from "@/lib/firebase";
 import { Officer } from "@/types";
 import Hero from "@/components/Hero";
 import Image from "next/image";
-import { User } from "lucide-react";
+import { User, MapPin, ExternalLink, Download } from "lucide-react";
 
 // Group members by rank for display
 const RANK_ORDER = [
@@ -174,6 +174,45 @@ export default function AboutPage() {
               twentieth century it is easy to understand why there were so many
               large and serious fires in earlier days.
             </p>
+          </div>
+        </div>
+
+        {/* District Map */}
+        <div className="max-w-3xl mx-auto mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">Our District</h2>
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            The Broadalbin Fire District covers the Town of Broadalbin in Fulton
+            County, New York, including the communities of Broadalbin, Vail Mills,
+            North Broadalbin, and Hagedorns Mills.
+          </p>
+          <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+            <Image
+              src="/broadalbin-fire-district-map.png"
+              alt="Broadalbin Fire District Map"
+              width={1800}
+              height={1200}
+              className="w-full h-auto"
+              priority={false}
+            />
+          </div>
+          <div className="flex gap-4 mt-4">
+            <a
+              href="/Broadalbin_Fire_District.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-medium transition-colors text-sm"
+            >
+              <ExternalLink size={16} />
+              Open Full Map
+            </a>
+            <a
+              href="/Broadalbin_Fire_District.pdf"
+              download
+              className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 font-medium transition-colors text-sm"
+            >
+              <Download size={16} />
+              Download PDF
+            </a>
           </div>
         </div>
 
