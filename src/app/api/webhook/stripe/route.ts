@@ -62,6 +62,14 @@ export async function POST(req: NextRequest) {
       // Handle new donation sessions — record created here on successful payment
       if (!donationId && session.metadata?.type === "donation") {
         const db = getAdminDb();
+
+        // Idempotency: skip if a donation with this session already exists
+        const existingDon = await db.collection("donations")
+          .where("stripeSessionId", "==", session.id).limit(1).get();
+        if (!existingDon.empty) {
+          return NextResponse.json({ received: true });
+        }
+
         const donName = session.metadata.name || "Anonymous";
         const donEmail = session.customer_email || "";
         const donAmount = parseFloat(session.metadata.amount || "0");
@@ -112,6 +120,14 @@ export async function POST(req: NextRequest) {
       const meta = session.metadata || {};
       if (!registrationId && meta.eventId && meta.name) {
         const db = getAdminDb();
+
+        // Idempotency: skip if a registration with this session already exists
+        const existingReg = await db.collection("registrations")
+          .where("stripeSessionId", "==", session.id).limit(1).get();
+        if (!existingReg.empty) {
+          return NextResponse.json({ received: true });
+        }
+
         const email = session.customer_email || "";
         const items = JSON.parse(meta.items || "[]");
         const total = parseFloat(meta.total || "0");
