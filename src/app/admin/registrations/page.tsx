@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { EventRegistration } from "@/types";
-import { Trash2, CheckCircle, Clock, CreditCard, Banknote, Download, Printer, Send } from "lucide-react";
+import { Trash2, CheckCircle, Clock, CreditCard, Banknote, Download, Printer, Send, RotateCcw } from "lucide-react";
 import PrintReceipt from "@/components/PrintReceipt";
 import AdminPagination from "@/components/AdminPagination";
 
@@ -61,6 +61,7 @@ export default function AdminRegistrationsPage() {
   };
 
   const [resending, setResending] = useState(false);
+  const [refunding, setRefunding] = useState(false);
 
   const resendReceipt = async (id: string) => {
     setResending(true);
@@ -79,6 +80,29 @@ export default function AdminRegistrationsPage() {
       alert("Failed to send email.");
     } finally {
       setResending(false);
+    }
+  };
+
+  const handleRefund = async (id: string) => {
+    if (!confirm("Issue a full refund for this registration? This cannot be undone.")) return;
+    setRefunding(true);
+    try {
+      const res = await fetch("/api/admin/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registrationId: id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Refund issued successfully.");
+        fetchRegistrations();
+      } else {
+        alert(data.error || "Refund failed.");
+      }
+    } catch {
+      alert("Refund failed.");
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -340,6 +364,24 @@ export default function AdminRegistrationsPage() {
                 <Send size={14} />
                 {resending ? "Sending..." : "Resend Email"}
               </button>
+              {selected.paymentMethod === "stripe" &&
+                selected.paymentStatus === "paid" &&
+                !(selected as EventRegistration & { refundStatus?: string }).refundStatus && (
+                  <button
+                    onClick={() => handleRefund(selected.id)}
+                    disabled={refunding}
+                    className="inline-flex items-center gap-2 bg-red-900/50 hover:bg-red-800/50 disabled:opacity-50 text-red-400 text-xs font-medium px-4 py-2.5 rounded-xl transition-colors"
+                  >
+                    <RotateCcw size={14} />
+                    {refunding ? "Processing..." : "Refund"}
+                  </button>
+                )}
+              {(selected as EventRegistration & { refundStatus?: string }).refundStatus === "refunded" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2.5 rounded-xl bg-red-900/30 text-red-400">
+                  <RotateCcw size={14} />
+                  Refunded
+                </span>
+              )}
             </div>
           </div>
         )}
