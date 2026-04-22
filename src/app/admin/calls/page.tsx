@@ -11,6 +11,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  where,
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Call } from "@/types";
@@ -69,8 +70,25 @@ export default function AdminCallsPage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
+  const ensureUniqueSlug = async (baseSlug: string, excludeId?: string) => {
+    let slug = baseSlug;
+    let suffix = 2;
+    while (true) {
+      const snap = await getDocs(
+        query(collection(getDb(), "calls"), where("slug", "==", slug))
+      );
+      const conflict = snap.docs.some((d) => d.id !== excludeId);
+      if (!conflict) return slug;
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+    }
+  };
+
   const handleSave = async () => {
     if (!editing) return;
+
+    const baseSlug = editing.slug || generateSlug(editing.title || "");
+    const slug = await ensureUniqueSlug(baseSlug, editing.id || undefined);
 
     const data = {
       title: editing.title || "",
@@ -79,7 +97,7 @@ export default function AdminCallsPage() {
       time: editing.time || "",
       location: editing.location || "",
       image: editing.image || "",
-      slug: editing.slug || generateSlug(editing.title || ""),
+      slug,
     };
 
     if (editing.id) {

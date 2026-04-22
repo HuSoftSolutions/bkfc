@@ -10,6 +10,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  where,
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { NewsArticle } from "@/types";
@@ -54,11 +55,27 @@ export default function AdminNewsPage() {
   const generateSlug = (title: string) =>
     title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  const ensureUniqueSlug = async (baseSlug: string, excludeId?: string) => {
+    let slug = baseSlug;
+    let suffix = 2;
+    while (true) {
+      const snap = await getDocs(
+        query(collection(getDb(), "news"), where("slug", "==", slug))
+      );
+      const conflict = snap.docs.some((d) => d.id !== excludeId);
+      if (!conflict) return slug;
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+    }
+  };
+
   const handleSave = async () => {
     if (!editing) return;
+    const baseSlug = editing.slug || generateSlug(editing.title || "");
+    const slug = await ensureUniqueSlug(baseSlug, editing.id || undefined);
     const data = {
       title: editing.title || "",
-      slug: editing.slug || generateSlug(editing.title || ""),
+      slug,
       content: editing.content || "",
       excerpt: editing.excerpt || (editing.content || "").substring(0, 150) + "…",
       image: editing.image || "",
