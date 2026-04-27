@@ -120,25 +120,60 @@ export default function AdminRegistrationsPage() {
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
+  const itemNames = [
+    ...new Set(filtered.flatMap((r) => r.items.map((i) => i.name))),
+  ].sort();
+
+  const itemTotals = itemNames.map((name) => ({
+    name,
+    quantity: filtered.reduce(
+      (sum, r) =>
+        sum + r.items.filter((i) => i.name === name).reduce((s, i) => s + i.quantity, 0),
+      0
+    ),
+  }));
+
   const exportCsv = () => {
-    const rows = filtered.map((r) => ({
-      Name: r.name,
-      Email: r.email,
-      Phone: r.phone || "",
-      Event: r.eventTitle,
-      Items: r.items.map((i) => `${i.name} x${i.quantity}`).join("; "),
-      Total: `$${r.total.toFixed(2)}`,
-      Payment: r.paymentMethod === "stripe" ? "Card" : "In Person",
-      Status: r.paymentStatus,
-      Date: new Date(r.createdAt).toLocaleDateString(),
-    }));
+    const rows = filtered.map((r) => {
+      const perItem: Record<string, number | ""> = {};
+      itemNames.forEach((name) => {
+        const qty = r.items
+          .filter((i) => i.name === name)
+          .reduce((s, i) => s + i.quantity, 0);
+        perItem[name] = qty || "";
+      });
+      return {
+        Name: r.name,
+        Email: r.email,
+        Phone: r.phone || "",
+        Event: r.eventTitle,
+        Items: r.items.map((i) => `${i.name} x${i.quantity}`).join("; "),
+        ...perItem,
+        Total: `$${r.total.toFixed(2)}`,
+        Payment: r.paymentMethod === "stripe" ? "Card" : "In Person",
+        Status: r.paymentStatus,
+        Date: new Date(r.createdAt).toLocaleDateString(),
+      };
+    });
 
     const headers = Object.keys(rows[0] || {});
+    const totalsRow: Record<string, string | number> = { Name: "TOTAL" };
+    itemNames.forEach((name) => {
+      const total = itemTotals.find((t) => t.name === name)?.quantity ?? 0;
+      totalsRow[name] = total;
+    });
+    totalsRow.Total = `$${filtered.reduce((s, r) => s + r.total, 0).toFixed(2)}`;
+
     const csv = [
       headers.join(","),
       ...rows.map((row) =>
-        headers.map((h) => `"${String(row[h as keyof typeof row]).replace(/"/g, '""')}"`).join(",")
+        headers
+          .map((h) => `"${String(row[h as keyof typeof row] ?? "").replace(/"/g, '""')}"`)
+          .join(",")
       ),
+      headers
+        .map((h) => `"${String(totalsRow[h] ?? "").replace(/"/g, '""')}"`)
+        .join(","),
     ].join("\n");
 
     const blob = new Blob([csv], { type: "text/csv" });
@@ -177,6 +212,23 @@ export default function AdminRegistrationsPage() {
           <p className="text-yellow-400 text-2xl font-bold">{pendingCount}</p>
         </div>
       </div>
+
+      {/* Item totals (respects filters) */}
+      {itemTotals.length > 0 && (
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
+          <p className="text-gray-500 text-xs mb-3">
+            Items Ordered{eventFilter || dateFrom || dateTo || filter !== "all" ? " (filtered)" : ""}
+          </p>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {itemTotals.map((t) => (
+              <div key={t.name} className="flex items-baseline gap-2">
+                <span className="text-white text-lg font-bold">{t.quantity}</span>
+                <span className="text-gray-400 text-sm">{t.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
