@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Officer } from "@/types";
-import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, User } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
 import AdminPagination from "@/components/AdminPagination";
 import Select from "react-select";
@@ -292,12 +292,21 @@ export default function AdminOfficersPage() {
             key={officer.id}
             className="flex items-center justify-between gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 sm:px-4 py-3"
           >
-            <div className="min-w-0">
-              <p className="text-white font-medium truncate">{officer.name}</p>
-              <p className="text-gray-500 text-xs truncate">
-                {getRanks(officer).join(", ") || "No rank assigned"}
-                {officer.servingSince && ` · Since ${officer.servingSince}`}
-              </p>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 shrink-0 flex items-center justify-center">
+                {officer.image ? (
+                  <img src={officer.image} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={18} className="text-gray-600" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-white font-medium truncate">{officer.name}</p>
+                <p className="text-gray-500 text-xs truncate">
+                  {getRanks(officer).join(", ") || "No rank assigned"}
+                  {officer.servingSince && ` · Since ${officer.servingSince}`}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={() => setEditing({ ...officer, ranks: getRanks(officer) })} className="text-gray-400 hover:text-white p-1">
