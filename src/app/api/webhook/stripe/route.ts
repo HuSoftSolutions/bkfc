@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
         if (donSnap.exists) {
           const don = donSnap.data()!;
           try {
+            if (!don.email) throw new Error("No donor email on donation record");
             await sendEmail(
               don.email,
               "Thank You for Your Donation — BKFC",
@@ -53,8 +54,8 @@ export async function POST(req: NextRequest) {
               <p><strong>Amount:</strong> $${don.amount.toFixed(2)}</p>`,
               "donation"
             );
-          } catch {
-            console.error("Failed to send donation emails");
+          } catch (err) {
+            console.error("Failed to send donation emails", { donationId, email: don.email, err });
           }
         }
       }
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
         }
 
         const donName = session.metadata.name || "Anonymous";
-        const donEmail = session.customer_email || "";
+        const donEmail = session.customer_email || session.customer_details?.email || "";
         const donAmount = parseFloat(session.metadata.amount || "0");
 
         await db.collection("donations").add({
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
         });
 
         try {
+          if (!donEmail) throw new Error("No donor email on Stripe session");
           await sendEmail(
             donEmail,
             "Thank You for Your Donation — BKFC",
@@ -100,8 +102,8 @@ export async function POST(req: NextRequest) {
             <p><strong>Amount:</strong> $${donAmount.toFixed(2)}</p>`,
             "donation"
           );
-        } catch {
-          console.error("Failed to send donation emails");
+        } catch (err) {
+          console.error("Failed to send donation emails", { sessionId: session.id, email: donEmail, err });
         }
       }
 
@@ -128,7 +130,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ received: true });
         }
 
-        const email = session.customer_email || "";
+        const email = session.customer_email || session.customer_details?.email || "";
         const items = JSON.parse(meta.items || "[]");
         const total = parseFloat(meta.total || "0");
 
@@ -176,9 +178,10 @@ export async function POST(req: NextRequest) {
         };
 
         try {
+          if (!email) throw new Error("No customer email on Stripe session");
           await sendEmail(email, `Registration Confirmed: ${meta.eventTitle}`, buildCustomerReceiptHtml(emailData));
-        } catch {
-          console.error("Failed to send customer receipt");
+        } catch (err) {
+          console.error("Failed to send customer receipt", { sessionId: session.id, email, err });
         }
 
         try {
@@ -187,8 +190,8 @@ export async function POST(req: NextRequest) {
             buildAdminNotificationHtml(emailData),
             "registration"
           );
-        } catch {
-          console.error("Failed to send admin notification");
+        } catch (err) {
+          console.error("Failed to send admin notification", { sessionId: session.id, err });
         }
       }
     }

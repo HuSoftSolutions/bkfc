@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
           buildAdminNotificationHtml(emailData),
           "registration"
         );
-      } catch {
-        console.error("Failed to send registration emails");
+      } catch (err) {
+        console.error("Failed to send registration emails", { registrationId: reg.id, email, err });
       }
 
       return NextResponse.json({ success: true, registrationId: reg.id });
