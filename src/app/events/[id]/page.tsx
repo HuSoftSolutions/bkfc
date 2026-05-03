@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Event } from "@/types";
+import { isRegistrationClosed } from "@/lib/registrationDeadline";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -173,16 +174,24 @@ export default function EventDetailPage() {
       {/* Register button */}
       {event.ticketingEnabled && (event.ticketOptions || []).length > 0 && (
         <div className="mb-8">
-          <Link
-            href={`/events/${event.id}/register`}
-            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors"
-          >
-            Buy Now
-          </Link>
-          {event.payInPerson && (
-            <p className="text-gray-500 text-sm mt-2">
-              Pay online or in person at the event.
-            </p>
+          {isRegistrationClosed(event.registrationDeadline) ? (
+            <div className="inline-flex items-center gap-2 bg-gray-100 border border-gray-200 text-gray-600 font-semibold px-6 py-3 rounded-xl">
+              Registration Closed
+            </div>
+          ) : (
+            <>
+              <Link
+                href={`/events/${event.id}/register`}
+                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors"
+              >
+                Buy Now
+              </Link>
+              {event.payInPerson && (
+                <p className="text-gray-500 text-sm mt-2">
+                  Pay online or in person at the event.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

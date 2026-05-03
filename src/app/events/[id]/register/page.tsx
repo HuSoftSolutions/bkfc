@@ -6,6 +6,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Event, TicketOption } from "@/types";
 import { formatPhoneNumber } from "@/lib/formatPhone";
+import { isRegistrationClosed } from "@/lib/registrationDeadline";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -167,6 +168,22 @@ export default function EventRegisterPage() {
         </h1>
         <Link href="/events" className="text-red-600 hover:text-red-700">
           &larr; Back to Events
+        </Link>
+      </div>
+    );
+  }
+
+  if (isRegistrationClosed(event.registrationDeadline)) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          Registration Closed
+        </h1>
+        <p className="text-gray-600 mb-6">
+          The registration deadline for this event has passed.
+        </p>
+        <Link href={`/events/${eventId}`} className="text-red-600 hover:text-red-700">
+          &larr; Back to Event
         </Link>
       </div>
     );

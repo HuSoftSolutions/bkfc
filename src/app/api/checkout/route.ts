@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml } from "@/lib/email";
+import { isRegistrationClosed } from "@/lib/registrationDeadline";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +23,18 @@ export async function POST(req: NextRequest) {
 
     const db = getAdminDb();
 
+    const eventSnap = await db.collection("events").doc(eventId).get();
+    if (!eventSnap.exists) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+    const eventDoc = eventSnap.data()!;
+    if (!eventDoc.ticketingEnabled) {
+      return NextResponse.json({ error: "Registration is not available for this event." }, { status: 400 });
+    }
+    if (isRegistrationClosed(eventDoc.registrationDeadline)) {
+      return NextResponse.json({ error: "Registration is closed for this event." }, { status: 400 });
+    }
+
     // If paying in person, just save the registration
     if (payInPerson) {
       const reg = await db.collection("registrations").add({
@@ -37,23 +50,11 @@ export async function POST(req: NextRequest) {
         createdAt: new Date().toISOString(),
       });
 
-      // Fetch event details for emails
-      let eventDate = "";
-      let eventTime = "";
-      let eventLocation = "";
-      try {
-        const eventSnap = await db.collection("events").doc(eventId).get();
-        if (eventSnap.exists) {
-          const eventData = eventSnap.data()!;
-          eventDate = eventData.date || "";
-          eventTime = eventData.time || "";
-          eventLocation = eventData.location || "";
-        }
-      } catch { /* non-critical */ }
-
       const emailData = {
         name, email, phone: phone || "", eventTitle,
-        eventDate, eventTime, eventLocation,
+        eventDate: eventDoc.date || "",
+        eventTime: eventDoc.time || "",
+        eventLocation: eventDoc.location || "",
         items, total,
         paymentMethod: "in-person" as const,
         paymentStatus: "pending" as const,

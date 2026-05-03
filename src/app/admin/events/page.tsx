@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { Event, TicketOption } from "@/types";
+import { isRegistrationClosed } from "@/lib/registrationDeadline";
 import { Plus, Pencil, Trash2, X, Ticket, Pin, PinOff, ImageIcon, QrCode, Download } from "lucide-react";
 import QRCode from "qrcode";
 import MediaPicker from "@/components/MediaPicker";
@@ -376,6 +377,11 @@ export default function AdminEventsPage() {
                   {event.ticketingEnabled && (
                     <span className="bg-blue-600/20 text-blue-400 text-[10px] font-medium px-2 py-0.5 rounded-full">
                       Ticketed
+                    </span>
+                  )}
+                  {event.ticketingEnabled && isRegistrationClosed(event.registrationDeadline) && (
+                    <span className="bg-gray-600/30 text-gray-300 text-[10px] font-medium px-2 py-0.5 rounded-full">
+                      Closed
                     </span>
                   )}
                 </div>
