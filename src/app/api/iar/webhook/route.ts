@@ -4,6 +4,28 @@ import { sendNotificationEmail } from "@/lib/email";
 
 const DEFAULT_DELAY_MINUTES = 60;
 const DEFAULT_BANNER_TEXT = "Units Currently Responding";
+const TZ = "America/New_York";
+
+function estDate(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: TZ });
+}
+
+function estTime24(d: Date): string {
+  return d.toLocaleTimeString("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function estDateTimeLong(d: Date): string {
+  return d.toLocaleString("en-US", { timeZone: TZ });
+}
+
+function estTimeShort(d: Date): string {
+  return d.toLocaleTimeString("en-US", { timeZone: TZ });
+}
 
 /** Convert a value to a readable string */
 function toStr(val: unknown): string {
@@ -48,14 +70,16 @@ function buildDescription(
 ): string {
   const parts: string[] = [];
 
-  // Format: "Monday, March 31, 2026 (2:02 pm)"
+  // Format: "Monday, March 31, 2026 (2:02 pm)" in Eastern Time
   const dateStr = now.toLocaleDateString("en-US", {
+    timeZone: TZ,
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
   });
   const timeStr = now.toLocaleTimeString("en-US", {
+    timeZone: TZ,
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -242,7 +266,7 @@ export async function POST(req: NextRequest) {
 
     // If no IAR ID match, try to find a recent IAR call with same type+address (within 2 hours)
     if (!existingCallId && callType && address) {
-      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+      const twoHoursAgoEstDate = estDate(new Date(now.getTime() - 2 * 60 * 60 * 1000));
       const recent = await db
         .collection("calls")
         .where("source", "==", "iar")
@@ -252,7 +276,7 @@ export async function POST(req: NextRequest) {
         .get();
       for (const d of recent.docs) {
         const data = d.data();
-        if (data.date && data.date >= twoHoursAgo.split("T")[0]) {
+        if (data.date && data.date >= twoHoursAgoEstDate) {
           existingCallId = d.id;
           break;
         }
@@ -277,8 +301,8 @@ export async function POST(req: NextRequest) {
         const existingDoc = await db.collection("calls").doc(existingCallId).get();
         const existingData = existingDoc.data();
         const updatedDesc = existingData?.description
-          ? `${existingData.description}\n\nCall cleared at ${now.toLocaleTimeString()}.`
-          : `Call cleared at ${now.toLocaleTimeString()}.`;
+          ? `${existingData.description}\n\nCall cleared at ${estTimeShort(now)}.`
+          : `Call cleared at ${estTimeShort(now)}.`;
         await db.collection("calls").doc(existingCallId).update({
           description: updatedDesc,
           updatedAt: now.toISOString(),
@@ -334,18 +358,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const estDateStr = estDate(now);
     const slug = (callType || "emergency-response")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
-      + "-" + now.toISOString().split("T")[0]
+      + "-" + estDateStr
       + "-" + now.getTime().toString(36);
 
     const callDoc = {
       title: callType || "Emergency Response",
       description: message,
-      date: now.toISOString().split("T")[0],
-      time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      date: estDateStr,
+      time: estTime24(now),
       location: address,
       image: defaultImage,
       slug,
@@ -376,9 +401,9 @@ export async function POST(req: NextRequest) {
         `<h2>New Dispatch Received</h2>
         <p><strong>Type:</strong> ${callType || "Unknown"}</p>
         <p><strong>Address:</strong> ${address || "Unknown"}</p>
-        <p><strong>Time:</strong> ${now.toLocaleString()}</p>
+        <p><strong>Time:</strong> ${estDateTimeLong(now)}</p>
         ${message && message !== rawText ? `<p><strong>Details:</strong> ${message}</p>` : ""}
-        <p><strong>Public release:</strong> ${releaseAt.toLocaleString()}</p>`,
+        <p><strong>Public release:</strong> ${estDateTimeLong(releaseAt)}</p>`,
         "general"
       );
     } catch { /* don't fail webhook */ }
