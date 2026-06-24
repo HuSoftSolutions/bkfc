@@ -28,6 +28,8 @@ import {
   Shield,
   KeyRound,
   DollarSign,
+  ShoppingBag,
+  Package,
 } from "lucide-react";
 
 type BadgeKey = keyof AdminBadges;
@@ -52,6 +54,8 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/messages", label: "Messages", icon: Mail, badgeKey: "messages", badgeStyle: "alert" },
   { href: "/admin/events", label: "Events", icon: CalendarDays, badgeKey: "events", badgeStyle: "count" },
   { href: "/admin/registrations", label: "Registrations", icon: Ticket, badgeKey: "registrations", badgeStyle: "count" },
+  { href: "/admin/products", label: "Store", icon: Package },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag, badgeKey: "orders", badgeStyle: "count" },
   { href: "/admin/donations", label: "Donations", icon: Heart, badgeKey: "donations", badgeStyle: "count" },
   { href: "/admin/finances", label: "Finances", icon: DollarSign },
   { href: "/admin/volunteers", label: "Volunteers", icon: UserPlus, badgeKey: "volunteers", badgeStyle: "alert" },

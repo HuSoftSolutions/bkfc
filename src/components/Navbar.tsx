@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: "/calls", label: "Calls" },
   { href: "/news", label: "News" },
   { href: "/events", label: "Events" },
+  { href: "/store", label: "Store" },
   { href: "/volunteer", label: "Volunteer" },
   { href: "/gallery", label: "Gallery" },
   { href: "/donate", label: "Donate" },

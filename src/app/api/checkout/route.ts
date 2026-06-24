@@ -3,6 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml } from "@/lib/email";
 import { isRegistrationClosed } from "@/lib/registrationDeadline";
+import { computeCardFee, normalizeFeeConfig, CARD_FEE_LABEL, CARD_FEE_OPTION_ID } from "@/lib/stripeFee";
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,16 +81,30 @@ export async function POST(req: NextRequest) {
     // leave orphaned pending records.
     const stripe = getStripe();
 
-    const lineItems = items.map(
-      (item: { name: string; quantity: number; price: number }) => ({
-        price_data: {
-          currency: "usd",
-          product_data: { name: item.name },
-          unit_amount: Math.round(item.price * 100),
-        },
-        quantity: item.quantity,
-      })
-    );
+    // Optionally pass the card processing fee on to the customer as its own
+    // line item. Computed server-side from the subtotal so it can't be tampered.
+    let finalItems = items as { optionId?: string; name: string; quantity: number; price: number }[];
+    let finalTotal = total;
+    if (eventDoc.passCardFee) {
+      const feeSnap = await db.collection("settings").doc("fees").get();
+      const fee = computeCardFee(total, normalizeFeeConfig(feeSnap.exists ? feeSnap.data() : undefined));
+      if (fee > 0) {
+        finalItems = [
+          ...finalItems,
+          { optionId: CARD_FEE_OPTION_ID, name: CARD_FEE_LABEL, quantity: 1, price: fee },
+        ];
+        finalTotal = Math.round((total + fee) * 100) / 100;
+      }
+    }
+
+    const lineItems = finalItems.map((item) => ({
+      price_data: {
+        currency: "usd",
+        product_data: { name: item.name },
+        unit_amount: Math.round(item.price * 100),
+      },
+      quantity: item.quantity,
+    }));
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
 
@@ -103,8 +118,8 @@ export async function POST(req: NextRequest) {
         eventTitle,
         name,
         phone: phone || "",
-        items: JSON.stringify(items),
-        total: String(total),
+        items: JSON.stringify(finalItems),
+        total: String(finalTotal),
       },
       success_url: `${origin}/events/${eventId}/confirmation?session={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/events/${eventId}`,

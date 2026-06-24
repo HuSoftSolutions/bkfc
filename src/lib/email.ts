@@ -20,6 +20,7 @@ export type NotificationType =
   | "volunteer"
   | "donation"
   | "registration"
+  | "order"
   | "general";
 
 let _emailRoutes: Record<string, string> | null = null;
@@ -237,6 +238,144 @@ export function buildAdminNotificationHtml(data: RegistrationEmailData): string 
         </tr>
       </table>
     </div>
+
+    ${buildItemsTable(data.items, data.total)}
+  </div>`;
+}
+
+// --- Store / Product order email templates ---
+
+export interface ProductOrderEmailData {
+  name: string;
+  email: string;
+  phone: string;
+  productTitle: string;
+  address?: { line1: string; city: string; state: string; zip: string };
+  items: { name: string; quantity: number; price: number }[];
+  fields: { label: string; value: string }[];
+  total: number;
+  paymentStatus: "pending" | "paid";
+  orderId: string;
+}
+
+function buildAddressBlock(address?: ProductOrderEmailData["address"]): string {
+  if (!address || !address.line1) return "";
+  return `<div style="margin:16px 0">
+    <p style="margin:0 0 4px 16px;font-size:12px;text-transform:uppercase;color:#666;letter-spacing:0.5px;font-weight:600">Mailing Address</p>
+    <div style="padding:8px 16px;background:#f9fafb;border-radius:8px;font-size:14px;color:#333;line-height:1.5">
+      ${address.line1}<br>${address.city}, ${address.state} ${address.zip}
+    </div>
+  </div>`;
+}
+
+function buildFieldsTable(fields: { label: string; value: string }[]): string {
+  const visible = fields.filter((f) => f.value !== "" && f.value != null);
+  if (visible.length === 0) return "";
+  const rows = visible
+    .map(
+      (f) =>
+        `<tr>
+          <td style="padding:4px 16px;font-size:12px;color:#666;font-weight:600;width:140px;vertical-align:top">${f.label}</td>
+          <td style="padding:4px 16px;font-size:14px;color:#333">${f.value}</td>
+        </tr>`
+    )
+    .join("");
+  return `<div style="margin:16px 0">
+    <p style="margin:0 0 4px 16px;font-size:12px;text-transform:uppercase;color:#666;letter-spacing:0.5px;font-weight:600">Order Details</p>
+    <table style="width:100%;border-collapse:collapse;background:#f9fafb;border-radius:8px">${rows}</table>
+  </div>`;
+}
+
+export function buildProductReceiptHtml(data: ProductOrderEmailData): string {
+  const isPaid = data.paymentStatus === "paid";
+  const statusColor = isPaid ? "#16a34a" : "#ca8a04";
+  const statusText = isPaid ? "PAID" : "PAYMENT PENDING";
+
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#111">
+    <div style="text-align:center;padding:32px 0 24px;border-bottom:3px solid #dc2626">
+      <h1 style="margin:0 0 4px;font-size:20px;color:#111">Broadalbin-Kennyetto Fire Co.</h1>
+      <p style="margin:0;font-size:13px;color:#666">14 Pine Street, Broadalbin, NY 12025</p>
+    </div>
+
+    <div style="text-align:center;padding:24px 0">
+      <div style="display:inline-block;background:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;padding:4px 14px;border-radius:999px;text-transform:uppercase;letter-spacing:0.5px">Order Confirmation</div>
+      <h2 style="margin:16px 0 4px;font-size:22px;color:#111">Thank You for Your Order</h2>
+      <p style="margin:0;font-size:14px;color:#666">${data.productTitle}</p>
+    </div>
+
+    <div style="margin:16px 0;padding:12px 16px;background:#f9fafb;border-radius:8px">
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600;width:100px">Name</td>
+          <td style="padding:4px 0;font-size:14px;color:#333">${data.name}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600">Email</td>
+          <td style="padding:4px 0;font-size:14px;color:#333">${data.email}</td>
+        </tr>
+        ${data.phone ? `<tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600">Phone</td>
+          <td style="padding:4px 0;font-size:14px;color:#333">${data.phone}</td>
+        </tr>` : ""}
+        <tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600">Order #</td>
+          <td style="padding:4px 0;font-size:14px;color:#333;font-family:monospace">${data.orderId.slice(0, 8).toUpperCase()}</td>
+        </tr>
+      </table>
+    </div>
+
+    ${buildAddressBlock(data.address)}
+
+    ${buildFieldsTable(data.fields)}
+
+    ${buildItemsTable(data.items, data.total)}
+
+    <div style="text-align:center;margin:20px 0">
+      <div style="display:inline-block;background:${statusColor};color:white;font-size:13px;font-weight:700;padding:8px 24px;border-radius:8px;letter-spacing:0.5px">${statusText}</div>
+    </div>
+
+    <div style="text-align:center;margin:32px 0 0;padding:20px 0;border-top:1px solid #eee;color:#999;font-size:12px">
+      <p style="margin:0 0 4px">Broadalbin-Kennyetto Fire Company</p>
+      <p style="margin:0 0 4px">14 Pine Street, Broadalbin, NY 12025</p>
+      <p style="margin:0">Thank you for your support!</p>
+    </div>
+  </div>`;
+}
+
+export function buildProductAdminHtml(data: ProductOrderEmailData): string {
+  const statusLabel = data.paymentStatus === "paid" ? "Paid" : "Pending";
+
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#111">
+    <h2 style="margin:0 0 16px;font-size:18px">New Order: ${data.productTitle}</h2>
+
+    <div style="margin:16px 0;padding:12px 16px;background:#f9fafb;border-radius:8px">
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600;width:100px">Name</td>
+          <td style="padding:4px 0;font-size:14px;color:#333">${data.name}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600">Email</td>
+          <td style="padding:4px 0;font-size:14px;color:#333">${data.email}</td>
+        </tr>
+        ${data.phone ? `<tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600">Phone</td>
+          <td style="padding:4px 0;font-size:14px;color:#333">${data.phone}</td>
+        </tr>` : ""}
+        <tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600">Payment</td>
+          <td style="padding:4px 0;font-size:14px;color:#333">Credit Card — ${statusLabel}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-size:12px;color:#666;font-weight:600">Order #</td>
+          <td style="padding:4px 0;font-size:14px;color:#333;font-family:monospace">${data.orderId.slice(0, 8).toUpperCase()}</td>
+        </tr>
+      </table>
+    </div>
+
+    ${buildAddressBlock(data.address)}
+
+    ${buildFieldsTable(data.fields)}
 
     ${buildItemsTable(data.items, data.total)}
   </div>`;

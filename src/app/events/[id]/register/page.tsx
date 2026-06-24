@@ -7,6 +7,7 @@ import { getDb } from "@/lib/firebase";
 import { Event, TicketOption } from "@/types";
 import { formatPhoneNumber } from "@/lib/formatPhone";
 import { isRegistrationClosed } from "@/lib/registrationDeadline";
+import { computeCardFee, normalizeFeeConfig, DEFAULT_STRIPE_FEE, type StripeFeeConfig } from "@/lib/stripeFee";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -26,6 +27,7 @@ export default function EventRegisterPage() {
   const eventId = params.id as string;
 
   const [event, setEvent] = useState<Event | null>(null);
+  const [feeConfig, setFeeConfig] = useState<StripeFeeConfig>(DEFAULT_STRIPE_FEE);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
@@ -45,6 +47,10 @@ export default function EventRegisterPage() {
             q[opt.id] = 0;
           });
           setQuantities(q);
+          if (data.passCardFee) {
+            const feeSnap = await getDoc(doc(getDb(), "settings", "fees"));
+            if (feeSnap.exists()) setFeeConfig(normalizeFeeConfig(feeSnap.data()));
+          }
         }
       } catch (err) {
         console.error("Error:", err);
@@ -75,6 +81,10 @@ export default function EventRegisterPage() {
     (sum, item) => sum + item.quantity * item.price,
     0
   );
+
+  // Display-only surcharge preview; the server computes the authoritative fee.
+  const cardFee = event?.passCardFee ? computeCardFee(total, feeConfig) : 0;
+  const grandTotal = Math.round((total + cardFee) * 100) / 100;
 
   const handleSubmit = useCallback(
     async (payInPerson: boolean) => {
@@ -314,9 +324,17 @@ export default function EventRegisterPage() {
                       </span>
                     </div>
                   ))}
+                  {cardFee > 0 && (
+                    <div className="flex justify-between text-sm pt-1">
+                      <span className="text-gray-600">Card processing fee</span>
+                      <span className="text-gray-900 font-medium">
+                        ${cardFee.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
                     <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>${grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
               )}
@@ -390,7 +408,7 @@ export default function EventRegisterPage() {
                 className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
               >
                 <CreditCard size={18} />
-                {submitting ? "Processing..." : `Pay $${total.toFixed(2)}`}
+                {submitting ? "Processing..." : `Pay $${grandTotal.toFixed(2)}`}
               </button>
 
               {event.payInPerson && (

@@ -34,6 +34,7 @@ const emptyEvent: Partial<Event> = {
   published: true,
   ticketingEnabled: false,
   payInPerson: false,
+  passCardFee: false,
   ticketOptions: [],
   registrationDeadline: "",
 };
@@ -117,6 +118,7 @@ export default function AdminEventsPage() {
       published: editing.published ?? true,
       ticketingEnabled: editing.ticketingEnabled ?? false,
       payInPerson: editing.payInPerson ?? false,
+      passCardFee: editing.passCardFee ?? false,
       ticketOptions: (editing.ticketOptions || []).filter((o) => o.name),
       registrationDeadline: editing.registrationDeadline || "",
     };
@@ -251,6 +253,12 @@ export default function AdminEventsPage() {
                   <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                     <input type="checkbox" checked={editing.payInPerson ?? false} onChange={(e) => setEditing({ ...editing, payInPerson: e.target.checked })} className="rounded" />
                     Allow Pay In Person
+                  </label>
+                )}
+                {editing.ticketingEnabled && (
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer" title="Adds a surcharge covering the card processing fee to online (card) payments only.">
+                    <input type="checkbox" checked={editing.passCardFee ?? false} onChange={(e) => setEditing({ ...editing, passCardFee: e.target.checked })} className="rounded" />
+                    Pass card fee to customer
                   </label>
                 )}
               </div>

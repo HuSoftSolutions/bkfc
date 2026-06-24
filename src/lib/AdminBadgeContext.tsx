@@ -9,7 +9,7 @@ interface AdminBadgeContextValue {
 }
 
 const AdminBadgeContext = createContext<AdminBadgeContextValue>({
-  badges: { calls: 0, news: 0, events: 0, messages: 0, volunteers: 0, registrations: 0, donations: 0 },
+  badges: { calls: 0, news: 0, events: 0, messages: 0, volunteers: 0, registrations: 0, donations: 0, orders: 0 },
   refresh: async () => {},
 });
 

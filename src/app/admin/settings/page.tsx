@@ -5,13 +5,15 @@ import { doc, getDoc, setDoc, collection, query, orderBy, getDocs } from "fireba
 import { getDb } from "@/lib/firebase";
 import { Event, HomePageFeedSettings } from "@/types";
 import { geocodeZip } from "@/lib/weather";
-import { Settings, Check, Mail, Bell } from "lucide-react";
+import { Settings, Check, Mail, Bell, CreditCard } from "lucide-react";
 import MediaPicker from "@/components/MediaPicker";
+import { DEFAULT_STRIPE_FEE, computeCardFee } from "@/lib/stripeFee";
 
 const DEFAULT_HOME_FEED_SETTINGS: HomePageFeedSettings = {
   newsCount: 6,
   eventsCount: 6,
   callsCount: 6,
+  productsCount: 3,
 };
 
 function sanitizeCount(value: unknown, fallback: number) {
@@ -51,12 +53,17 @@ export default function AdminSettingsPage() {
   const [noticeStatus, setNoticeStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [homeFeedSettings, setHomeFeedSettings] = useState<HomePageFeedSettings>(DEFAULT_HOME_FEED_SETTINGS);
   const [homeFeedStatus, setHomeFeedStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [feeSettings, setFeeSettings] = useState({
+    percent: String(DEFAULT_STRIPE_FEE.percent),
+    fixed: String(DEFAULT_STRIPE_FEE.fixed),
+  });
+  const [feeStatus, setFeeStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const [weatherDoc, heroDoc, fbDoc, emailDoc, contactDoc, noticeDoc, homepageDoc] = await Promise.all([
+        const [weatherDoc, heroDoc, fbDoc, emailDoc, contactDoc, noticeDoc, homepageDoc, feesDoc] = await Promise.all([
           getDoc(doc(getDb(), "settings", "weather")),
           getDoc(doc(getDb(), "settings", "hero")),
           getDoc(doc(getDb(), "settings", "facebook")),
@@ -64,6 +71,7 @@ export default function AdminSettingsPage() {
           getDoc(doc(getDb(), "settings", "contact")),
           getDoc(doc(getDb(), "settings", "notice")),
           getDoc(doc(getDb(), "settings", "homepage")),
+          getDoc(doc(getDb(), "settings", "fees")),
         ]);
         if (weatherDoc.exists()) {
           const data = weatherDoc.data();
@@ -97,6 +105,14 @@ export default function AdminSettingsPage() {
             newsCount: sanitizeCount(hd.newsCount, DEFAULT_HOME_FEED_SETTINGS.newsCount),
             eventsCount: sanitizeCount(hd.eventsCount, DEFAULT_HOME_FEED_SETTINGS.eventsCount),
             callsCount: sanitizeCount(hd.callsCount, DEFAULT_HOME_FEED_SETTINGS.callsCount),
+            productsCount: sanitizeCount(hd.productsCount, DEFAULT_HOME_FEED_SETTINGS.productsCount),
+          });
+        }
+        if (feesDoc.exists()) {
+          const fd = feesDoc.data();
+          setFeeSettings({
+            percent: fd.percent != null ? String(fd.percent) : String(DEFAULT_STRIPE_FEE.percent),
+            fixed: fd.fixed != null ? String(fd.fixed) : String(DEFAULT_STRIPE_FEE.fixed),
           });
         }
         // Fetch events for notice link picker
@@ -261,6 +277,32 @@ export default function AdminSettingsPage() {
       setHomeFeedStatus("error");
     }
   };
+
+  const handleFeeSave = async () => {
+    setFeeStatus("saving");
+    try {
+      const percent = Number(feeSettings.percent);
+      const fixed = Number(feeSettings.fixed);
+      if (!Number.isFinite(percent) || percent < 0 || percent >= 100 || !Number.isFinite(fixed) || fixed < 0) {
+        setFeeStatus("error");
+        return;
+      }
+      await setDoc(doc(getDb(), "settings", "fees"), {
+        percent,
+        fixed,
+        updatedAt: new Date().toISOString(),
+      });
+      setFeeStatus("saved");
+      setTimeout(() => setFeeStatus("idle"), 2000);
+    } catch {
+      setFeeStatus("error");
+    }
+  };
+
+  const feePreview = computeCardFee(20, {
+    percent: Number(feeSettings.percent) || 0,
+    fixed: Number(feeSettings.fixed) || 0,
+  });
 
   const inputClass =
     "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 focus:outline-none";
@@ -485,6 +527,7 @@ export default function AdminSettingsPage() {
               { key: "newsCount", label: "News Items" },
               { key: "eventsCount", label: "Event Items" },
               { key: "callsCount", label: "Recent Calls" },
+              { key: "productsCount", label: "Store Products" },
             ].map(({ key, label }) => (
               <div key={key}>
                 <label className="block text-xs text-gray-400 mb-1">{label}</label>
@@ -611,6 +654,73 @@ export default function AdminSettingsPage() {
 
             {emailStatus === "error" && (
               <p className="text-red-400 text-sm">Failed to save.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Card Processing Fee */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+            <CreditCard size={18} className="text-green-400" />
+            Card Processing Fee
+          </h2>
+          <p className="text-gray-400 text-sm mb-4">
+            The Stripe rate used when an event or product has &ldquo;Pass card fee to
+            customer&rdquo; enabled. The surcharge is grossed up so the company nets the
+            full price after Stripe&rsquo;s cut. Defaults to {DEFAULT_STRIPE_FEE.percent}% + $
+            {DEFAULT_STRIPE_FEE.fixed.toFixed(2)}.
+          </p>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Percent (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={99}
+                  value={feeSettings.percent}
+                  onChange={(e) => setFeeSettings((p) => ({ ...p, percent: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Fixed ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  value={feeSettings.fixed}
+                  onChange={(e) => setFeeSettings((p) => ({ ...p, fixed: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <p className="text-gray-500 text-xs">
+              Example: on a $20.00 order, the customer would be charged a{" "}
+              <span className="text-gray-300 font-medium">${feePreview.toFixed(2)}</span> fee.
+            </p>
+
+            <button
+              onClick={handleFeeSave}
+              disabled={feeStatus === "saving"}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors w-full"
+            >
+              {feeStatus === "saving" ? (
+                "Saving..."
+              ) : feeStatus === "saved" ? (
+                <>
+                  <Check size={16} /> Saved
+                </>
+              ) : (
+                "Save Fee Settings"
+              )}
+            </button>
+
+            {feeStatus === "error" && (
+              <p className="text-red-400 text-sm">Enter a valid percent (0–99) and fixed amount.</p>
             )}
           </div>
         </div>

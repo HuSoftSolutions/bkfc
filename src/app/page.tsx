@@ -11,7 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { Call, NewsArticle, Event, HomePageFeedSettings } from "@/types";
+import { Call, NewsArticle, Event, Product, HomePageFeedSettings } from "@/types";
 import Hero from "@/components/Hero";
 import CallCard from "@/components/CallCard";
 import WeatherForecast from "@/components/WeatherForecast";
@@ -33,13 +33,22 @@ import {
   Heart,
   CalendarDays,
   Pin,
+  ShoppingBag,
+  Tag,
 } from "lucide-react";
 
 const DEFAULT_COUNTS: HomePageFeedSettings = {
   newsCount: 6,
   eventsCount: 6,
   callsCount: 6,
+  productsCount: 3,
 };
+
+function startingPrice(product: Product): number | null {
+  const prices = (product.variants || []).map((v) => v.price);
+  if (prices.length === 0) return null;
+  return Math.min(...prices);
+}
 
 function sanitizeCount(value: unknown, fallback: number) {
   const parsed = Number(value);
@@ -51,11 +60,13 @@ export default function HomePage() {
   const [calls, setCalls] = useState<Call[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [sectionCounts, setSectionCounts] =
     useState<HomePageFeedSettings>(DEFAULT_COUNTS);
   const [loadingCalls, setLoadingCalls] = useState(true);
   const [loadingNews, setLoadingNews] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     async function fetchCalls(count: number) {
@@ -118,6 +129,25 @@ export default function HomePage() {
       }
     }
 
+    async function fetchProducts(count: number) {
+      try {
+        const q = query(
+          collection(getDb(), "products"),
+          where("published", "==", true)
+        );
+        const snapshot = await getDocs(q);
+        const all = sortPinned(
+          (snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Product[])
+            .filter((p) => p.available !== false && (p.variants || []).length > 0)
+        );
+        setProducts(all.slice(0, count));
+      } catch (err) {
+        console.error("Error fetching products:", err);
+      } finally {
+        setLoadingProducts(false);
+      }
+    }
+
     async function loadHomePageData() {
       let counts = DEFAULT_COUNTS;
       try {
@@ -128,6 +158,7 @@ export default function HomePage() {
             newsCount: sanitizeCount(data.newsCount, DEFAULT_COUNTS.newsCount),
             eventsCount: sanitizeCount(data.eventsCount, DEFAULT_COUNTS.eventsCount),
             callsCount: sanitizeCount(data.callsCount, DEFAULT_COUNTS.callsCount),
+            productsCount: sanitizeCount(data.productsCount, DEFAULT_COUNTS.productsCount),
           };
         }
       } catch (err) {
@@ -138,6 +169,7 @@ export default function HomePage() {
       fetchCalls(counts.callsCount);
       fetchNews(counts.newsCount);
       fetchEvents(counts.eventsCount);
+      fetchProducts(counts.productsCount);
     }
 
     loadHomePageData();
@@ -316,8 +348,82 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Latest News */}
+      {/* Shop the Store */}
       <section className="relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
+          <SectionHeader
+            icon={<ShoppingBag size={20} />}
+            title="Shop the Store"
+            href="/store"
+          />
+
+          {loadingProducts ? (
+            <SkeletonGrid count={sectionCounts.productsCount} height="h-56" />
+          ) : products.length === 0 ? (
+            <EmptyState text="No products available right now." />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {products.map((product) => {
+                const price = startingPrice(product);
+                return (
+                  <Link
+                    key={product.id}
+                    href={`/store/${product.id}`}
+                    className="group bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-red-300 hover:shadow-md transition-all duration-300"
+                  >
+                    <div className="relative w-full h-40 overflow-hidden">
+                      {product.image ? (
+                        <Image
+                          src={product.image}
+                          alt={product.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <PlaceholderImage variant="event" className="h-40" />
+                      )}
+                      {product.pinned && (
+                        <div className="absolute top-3 right-3 bg-yellow-500 rounded-full p-1 shadow">
+                          <Pin size={12} className="text-white rotate-45" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-5">
+                      <h3 className="text-gray-900 font-bold text-lg mb-3 group-hover:text-red-700 transition-colors">
+                        {product.title}
+                      </h3>
+                      {price !== null && (
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
+                            <Tag size={13} className="text-red-600" />
+                          </div>
+                          <span>
+                            {(product.variants || []).length > 1 ? "From " : ""}
+                            <span className="text-gray-900 font-semibold">
+                              ${price.toFixed(2)}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+                      {product.description && (
+                        <p className="text-gray-500 text-sm mt-3 line-clamp-2">
+                          {product.description}
+                        </p>
+                      )}
+                      <div className="mt-4 flex items-center gap-1 text-red-600 text-sm font-medium whitespace-nowrap">
+                        Shop Now <ArrowUpRight size={14} />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Latest News */}
+      <section className="relative bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
           <SectionHeader
             icon={<Newspaper size={20} />}

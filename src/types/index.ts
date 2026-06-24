@@ -85,6 +85,8 @@ export interface Event {
   pinned?: boolean;
   ticketingEnabled?: boolean;
   payInPerson?: boolean;
+  /** Add a surcharge covering the card processing fee to online payments. */
+  passCardFee?: boolean;
   ticketOptions?: TicketOption[];
   registrationDeadline?: string;
 }
@@ -104,6 +106,75 @@ export interface EventRegistration {
   createdAt: string;
 }
 
+// --- Store / Products ---
+
+/** A priced option for a product (e.g. "Sign — $20", "Sign + Bracket — $22.50"). */
+export interface ProductVariant {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+}
+
+export type ProductFieldType = "text" | "textarea" | "number" | "select" | "checkbox";
+
+/** A custom input the admin defines per product (e.g. address digits, mounting). */
+export interface ProductField {
+  id: string;
+  label: string;
+  type: ProductFieldType;
+  required?: boolean;
+  /** Choices for `select` fields. */
+  options?: string[];
+  placeholder?: string;
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  published: boolean;
+  pinned?: boolean;
+  /** Whether the product can currently be purchased (separate from being listed). */
+  available?: boolean;
+  /** Add a surcharge covering the card processing fee to the customer's total. */
+  passCardFee?: boolean;
+  /** Collect a mailing address in the order form (required when enabled). */
+  collectAddress?: boolean;
+  variants: ProductVariant[];
+  fields: ProductField[];
+}
+
+export interface MailingAddress {
+  line1: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+export interface ProductOrder {
+  id: string;
+  productId: string;
+  productTitle: string;
+  name: string;
+  email: string;
+  phone: string;
+  /** Mailing address, present when the product has address collection enabled. */
+  address?: MailingAddress;
+  items: { optionId: string; name: string; quantity: number; price: number }[];
+  /** Answers to the product's custom fields, captured at order time. */
+  fields: { fieldId: string; label: string; value: string }[];
+  total: number;
+  paymentMethod: "stripe";
+  paymentStatus: "pending" | "paid" | "failed";
+  stripeSessionId?: string;
+  refundStatus?: string;
+  refundId?: string;
+  refundedAt?: string;
+  createdAt: string;
+}
+
 export interface ContactFormData {
   name: string;
   email: string;
@@ -116,6 +187,7 @@ export interface HomePageFeedSettings {
   newsCount: number;
   eventsCount: number;
   callsCount: number;
+  productsCount: number;
 }
 
 export interface VolunteerFormData {

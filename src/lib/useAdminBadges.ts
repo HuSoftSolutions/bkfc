@@ -12,6 +12,7 @@ export interface AdminBadges {
   volunteers: number;     // unreviewed count
   registrations: number;
   donations: number;
+  orders: number;
 }
 
 const EMPTY: AdminBadges = {
@@ -22,6 +23,7 @@ const EMPTY: AdminBadges = {
   volunteers: 0,
   registrations: 0,
   donations: 0,
+  orders: 0,
 };
 
 export function useAdminBadges() {
@@ -37,6 +39,7 @@ export function useAdminBadges() {
         volunteersSnap,
         registrationsSnap,
         donationsSnap,
+        ordersSnap,
       ] = await Promise.all([
         getDocs(collection(getDb(), "calls")),
         getDocs(collection(getDb(), "news")),
@@ -45,6 +48,7 @@ export function useAdminBadges() {
         getDocs(collection(getDb(), "volunteerApplications")),
         getDocs(collection(getDb(), "registrations")),
         getDocs(collection(getDb(), "donations")),
+        getDocs(collection(getDb(), "orders")),
       ]);
 
       const currentYear = new Date().getFullYear().toString();
@@ -60,6 +64,7 @@ export function useAdminBadges() {
         volunteers: unreviewedVolunteers,
         registrations: registrationsSnap.size,
         donations: donationsSnap.size,
+        orders: ordersSnap.size,
       });
     } catch {
       // silent

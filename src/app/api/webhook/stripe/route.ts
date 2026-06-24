@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml } from "@/lib/email";
+import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml, buildProductReceiptHtml, buildProductAdminHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -105,6 +105,85 @@ export async function POST(req: NextRequest) {
         } catch (err) {
           console.error("Failed to send donation emails", { sessionId: session.id, email: donEmail, err });
         }
+      }
+
+      // Handle store product orders — the real order is created here, on
+      // successful payment, from the staged `pendingOrders` doc. Abandoned
+      // checkouts never materialize into an order.
+      const pendingOrderId = session.metadata?.pendingOrderId;
+      if (pendingOrderId && session.metadata?.type === "product") {
+        const db = getAdminDb();
+
+        // Idempotency: skip if an order for this session already exists
+        const existingOrder = await db.collection("orders")
+          .where("stripeSessionId", "==", session.id).limit(1).get();
+        if (!existingOrder.empty) {
+          return NextResponse.json({ received: true });
+        }
+
+        const pendingRef = db.collection("pendingOrders").doc(pendingOrderId);
+        const pendingSnap = await pendingRef.get();
+        if (!pendingSnap.exists) {
+          return NextResponse.json({ received: true });
+        }
+        const pending = pendingSnap.data()!;
+        const email =
+          pending.email || session.customer_email || session.customer_details?.email || "";
+
+        const orderRef = await db.collection("orders").add({
+          productId: pending.productId,
+          productTitle: pending.productTitle || "",
+          name: pending.name,
+          email,
+          phone: pending.phone || "",
+          ...(pending.address ? { address: pending.address } : {}),
+          items: pending.items || [],
+          fields: pending.fields || [],
+          total: pending.total || 0,
+          paymentMethod: "stripe",
+          paymentStatus: "paid",
+          stripeSessionId: session.id,
+          createdAt: pending.createdAt || new Date().toISOString(),
+        });
+
+        const emailData = {
+          name: pending.name,
+          email,
+          phone: pending.phone || "",
+          productTitle: pending.productTitle || "",
+          address: pending.address,
+          items: pending.items || [],
+          fields: pending.fields || [],
+          total: pending.total || 0,
+          paymentStatus: "paid" as const,
+          orderId: orderRef.id,
+        };
+
+        try {
+          if (!email) throw new Error("No customer email on order");
+          await sendEmail(email, `Order Confirmed: ${pending.productTitle}`, buildProductReceiptHtml(emailData));
+        } catch (err) {
+          console.error("Failed to send order receipt", { orderId: orderRef.id, email, err });
+        }
+
+        try {
+          await sendNotificationEmail(
+            `New Order: ${pending.name} — ${pending.productTitle}`,
+            buildProductAdminHtml(emailData),
+            "order"
+          );
+        } catch (err) {
+          console.error("Failed to send order admin notification", { orderId: orderRef.id, err });
+        }
+
+        // Clean up the staging doc; non-critical if it fails.
+        try {
+          await pendingRef.delete();
+        } catch (err) {
+          console.error("Failed to delete staged order", { pendingOrderId, err });
+        }
+
+        return NextResponse.json({ received: true });
       }
 
       // Handle legacy sessions that pre-created a registration
