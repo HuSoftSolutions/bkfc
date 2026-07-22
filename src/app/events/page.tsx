@@ -8,7 +8,7 @@ import Hero from "@/components/Hero";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Clock, MapPin, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { sortPinned } from "@/lib/sortPinned";
+import { sortEventsUpcomingFirst } from "@/lib/sortPinned";
 import PlaceholderImage from "@/components/PlaceholderImage";
 
 const PER_PAGE = 9;
@@ -37,7 +37,7 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  const sorted = sortPinned(events);
+  const sorted = sortEventsUpcomingFirst(events);
   const totalPages = Math.ceil(sorted.length / PER_PAGE);
   const paginated = sorted.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
