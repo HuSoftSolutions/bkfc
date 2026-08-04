@@ -23,10 +23,6 @@ function estDateTimeLong(d: Date): string {
   return d.toLocaleString("en-US", { timeZone: TZ });
 }
 
-function estTimeShort(d: Date): string {
-  return d.toLocaleTimeString("en-US", { timeZone: TZ });
-}
-
 /** Convert a value to a readable string */
 function toStr(val: unknown): string {
   if (val === undefined || val === null || val === "") return "";
@@ -296,15 +292,8 @@ export async function POST(req: NextRequest) {
         updatedAt: now.toISOString(),
       });
 
-      // Update existing call with close info if found
       if (existingCallId) {
-        const existingDoc = await db.collection("calls").doc(existingCallId).get();
-        const existingData = existingDoc.data();
-        const updatedDesc = existingData?.description
-          ? `${existingData.description}\n\nCall cleared at ${estTimeShort(now)}.`
-          : `Call cleared at ${estTimeShort(now)}.`;
         await db.collection("calls").doc(existingCallId).update({
-          description: updatedDesc,
           updatedAt: now.toISOString(),
         });
       }
@@ -313,21 +302,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (eventType === "update" && existingCallId) {
-      // Append update info to existing call
       const existingDoc = await db.collection("calls").doc(existingCallId).get();
       const existingData = existingDoc.data();
 
+      // Only the address may change publicly — CAD narrative never reaches the description
       const updates: Record<string, unknown> = { updatedAt: now.toISOString() };
-
-      // Update address if provided and different
       if (address && address !== existingData?.location) {
         updates.location = address;
-      }
-      // Append message if new info
-      if (message && message !== rawText && message !== existingData?.description) {
-        updates.description = existingData?.description
-          ? `${existingData.description}\n\nUpdate: ${message}`
-          : message;
       }
 
       await db.collection("calls").doc(existingCallId).update(updates);
@@ -366,9 +347,11 @@ export async function POST(req: NextRequest) {
       + "-" + estDateStr
       + "-" + now.getTime().toString(36);
 
+    // Public post carries only the nature (title) — the CAD narrative stays in
+    // iarLogs and the notification email, never on the publicly-readable call doc.
     const callDoc = {
       title: callType || "Emergency Response",
-      description: message,
+      description: "",
       date: estDateStr,
       time: estTime24(now),
       location: address,
@@ -379,7 +362,6 @@ export async function POST(req: NextRequest) {
       releaseAt: releaseAt.toISOString(),
       source: "iar",
       iarIncidentId: iarIncidentId || null,
-      rawPayload: rawText,
     };
 
     const callRef = await db.collection("calls").add(callDoc);
