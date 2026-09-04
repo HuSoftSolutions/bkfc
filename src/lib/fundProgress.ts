@@ -51,3 +51,42 @@ export async function getFundProgress(slug: string): Promise<FundProgress | null
     lastDonationAt,
   };
 }
+
+/** Active funds with a public progress page, plus their paid totals. */
+export async function listActiveFunds(): Promise<FundProgress[]> {
+  const db = getAdminDb();
+  const [fundSnap, donSnap] = await Promise.all([
+    db.collection("funds").where("active", "==", true).get(),
+    db.collection("donations").where("paymentStatus", "==", "paid").get(),
+  ]);
+
+  const totals = new Map<string, { raised: number; count: number; last: string | null }>();
+  for (const doc of donSnap.docs) {
+    const d = doc.data();
+    const slug = typeof d.fund === "string" && d.fund ? d.fund : "general";
+    const t = totals.get(slug) || { raised: 0, count: 0, last: null };
+    t.raised += Number(d.amount) || 0;
+    t.count += 1;
+    if (typeof d.createdAt === "string" && (!t.last || d.createdAt > t.last)) t.last = d.createdAt;
+    totals.set(slug, t);
+  }
+
+  return fundSnap.docs
+    .map((doc) => doc.data())
+    .filter((f) => f.showProgress !== false && typeof f.slug === "string")
+    .map((f) => {
+      const t = totals.get(f.slug) || { raised: 0, count: 0, last: null };
+      return {
+        slug: f.slug,
+        name: f.name,
+        description: f.description || "",
+        goal: Number(f.goal) || 0,
+        active: true,
+        showProgress: true,
+        raised: Math.round(t.raised * 100) / 100,
+        donorCount: t.count,
+        lastDonationAt: t.last,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

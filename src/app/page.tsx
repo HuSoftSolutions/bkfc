@@ -18,6 +18,7 @@ import WeatherForecast from "@/components/WeatherForecast";
 import MapSection from "@/components/MapSection";
 import FacebookFeed from "@/components/FacebookFeed";
 import PlaceholderImage from "@/components/PlaceholderImage";
+import ActiveFunds from "@/components/ActiveFunds";
 import { sortEventsUpcomingFirst, sortPinned } from "@/lib/sortPinned";
 import { filterPublicCalls } from "@/lib/filterCalls";
 import Link from "next/link";
@@ -208,6 +209,9 @@ export default function HomePage() {
 
       {/* Weather */}
       <WeatherForecast />
+
+      {/* Active fundraising campaigns */}
+      <ActiveFunds />
 
       {/* Donate section */}
       <section className="relative bg-gray-50">
