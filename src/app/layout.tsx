@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.broadalbinfire.com"),
   title: {
     default: "BKFC | Broadalbin-Kennyetto Fire Company",
     template: "%s | BKFC",

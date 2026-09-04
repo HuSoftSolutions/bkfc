@@ -2,9 +2,8 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { Heart, Users, Target, Share2 } from "lucide-react";
+import { Heart, Users, Target, Share2, Download, ImageIcon } from "lucide-react";
 import Hero from "@/components/Hero";
-import FundProgressCard from "@/components/FundProgressCard";
 import { formatMoney } from "@/lib/funds";
 
 interface FundProgress {
@@ -22,7 +21,7 @@ export default function FundPage({ params }: { params: Promise<{ slug: string }>
   const { slug } = use(params);
   const [fund, setFund] = useState<FundProgress | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading");
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"page" | "image" | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +43,20 @@ export default function FundPage({ params }: { params: Promise<{ slug: string }>
     };
   }, [slug]);
 
+  // Stable, always-current image URL. The raised total is appended so
+  // browsers and social apps refetch once the number changes.
+  const imagePath = fund ? `/api/funds/${fund.slug}/image?v=${Math.round(fund.raised)}` : "";
+
+  const copy = async (text: string, which: "page" | "image") => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(which);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
   const share = async () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -54,13 +67,7 @@ export default function FundPage({ params }: { params: Promise<{ slug: string }>
         // fall through to clipboard
       }
     }
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore
-    }
+    await copy(url, "page");
   };
 
   if (status === "missing") {
@@ -142,22 +149,39 @@ export default function FundPage({ params }: { params: Promise<{ slug: string }>
                 onClick={share}
                 className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-medium py-3 rounded-xl transition-colors"
               >
-                <Share2 size={16} /> {copied ? "Link copied!" : "Share this page"}
+                <Share2 size={16} /> {copied === "page" ? "Link copied!" : "Share this page"}
               </button>
 
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={`/api/funds/${fund.slug}/image?download=1`}
+                  className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-medium py-2.5 rounded-xl transition-colors"
+                >
+                  <Download size={14} /> Save image
+                </a>
+                <button
+                  onClick={() => copy(`${window.location.origin}${imagePath}`, "image")}
+                  className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-medium py-2.5 rounded-xl transition-colors"
+                >
+                  <ImageIcon size={14} /> {copied === "image" ? "Copied!" : "Copy image link"}
+                </button>
+              </div>
+
               <p className="text-xs text-gray-400 text-center">
-                Totals include online and in-person gifts and update automatically.
+                Totals include online and in-person gifts. The image always shows the current total,
+                so you can post it anywhere and it stays up to date.
               </p>
             </div>
 
             {/* Progress graphic */}
             <div className="lg:col-span-3">
               <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white">
-                <FundProgressCard
-                  fundName={fund.name}
-                  raised={fund.raised}
-                  goal={fund.goal}
-                  patchDataUrl="/bkfc-patch.png"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePath}
+                  alt={`${fund.name}: ${formatMoney(fund.raised)} raised of ${formatMoney(fund.goal)} goal`}
+                  width={1080}
+                  height={1350}
                   className="w-full h-auto"
                 />
               </div>

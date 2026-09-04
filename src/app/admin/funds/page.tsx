@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   collection,
@@ -16,8 +16,6 @@ import QRCode from "qrcode";
 import { getDb } from "@/lib/firebase";
 import { Fund, Donation } from "@/types";
 import { donationFundSlug, formatMoney, slugifyFund, GENERAL_FUND_SLUG } from "@/lib/funds";
-import FundProgressCard from "@/components/FundProgressCard";
-import { fetchAsDataUrl, svgToPngDataUrl } from "@/lib/svgExport";
 import {
   Plus,
   Pencil,
@@ -29,6 +27,7 @@ import {
   ExternalLink,
   ImageIcon,
   Heart,
+  Copy,
 } from "lucide-react";
 
 const inputClass =
@@ -54,9 +53,8 @@ export default function AdminFundsPage() {
   const [qrTarget, setQrTarget] = useState<"donate" | "progress">("donate");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [imageFund, setImageFund] = useState<Fund | null>(null);
-  const [patchDataUrl, setPatchDataUrl] = useState<string | undefined>();
-  const [exporting, setExporting] = useState(false);
-  const cardRef = useRef<SVGSVGElement>(null);
+  const [imageLayout, setImageLayout] = useState<"portrait" | "wide">("portrait");
+  const [copiedImage, setCopiedImage] = useState(false);
 
   async function fetchAll() {
     const db = getDb();
@@ -161,27 +159,18 @@ export default function AdminFundsPage() {
     a.click();
   };
 
-  const openImage = async (fund: Fund) => {
-    if (!patchDataUrl) setPatchDataUrl(await fetchAsDataUrl("/bkfc-patch.png"));
-    setImageFund(fund);
-  };
+  const imageUrl = (f: Fund, layout: "portrait" | "wide", extra = "") =>
+    `${origin}/api/funds/${f.slug}/image?${layout === "wide" ? "layout=wide&" : ""}v=${Math.round(totals[f.slug]?.raised || 0)}${extra}`;
 
-  const downloadImage = async () => {
-    if (!cardRef.current || !imageFund) return;
-    setExporting(true);
+  const copyImageLink = async (f: Fund) => {
     try {
-      const png = await svgToPngDataUrl(cardRef.current, 2);
-      const date = new Date().toISOString().slice(0, 10);
-      downloadDataUrl(png, `${imageFund.slug}-progress-${date}.png`);
-    } catch (err) {
-      console.error(err);
-      alert("Could not generate the image. Try again in a different browser.");
-    } finally {
-      setExporting(false);
+      await navigator.clipboard.writeText(imageUrl(f, imageLayout));
+      setCopiedImage(true);
+      setTimeout(() => setCopiedImage(false), 2000);
+    } catch {
+      // ignore
     }
   };
-
-  const updatedLabel = `Updated ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 
   return (
     <div>
@@ -276,10 +265,10 @@ export default function AdminFundsPage() {
                     <QrCode size={16} />
                   </button>
                   <button
-                    onClick={() => openImage(fund)}
+                    onClick={() => setImageFund(fund)}
                     className="text-gray-400 hover:text-white p-1.5 disabled:opacity-40"
                     title="Progress image"
-                    disabled={!fund.goal}
+                    disabled={!fund.goal || !fund.showProgress}
                   >
                     <ImageIcon size={16} />
                   </button>
@@ -464,27 +453,45 @@ export default function AdminFundsPage() {
               </button>
             </div>
             <p className="text-gray-400 text-xs mb-3">
-              Sized for Facebook and Instagram (1080×1350). Numbers reflect today&apos;s totals.
+              Generated live from today&apos;s totals. Download it to post, or copy the link — the link
+              always shows the current amount wherever it&apos;s embedded.
             </p>
-            <div className="rounded-lg overflow-hidden border border-gray-700 mb-4">
-              <FundProgressCard
-                ref={cardRef}
-                fundName={imageFund.name}
-                raised={totals[imageFund.slug]?.raised || 0}
-                goal={imageFund.goal || 0}
-                updatedLabel={updatedLabel}
-                ctaLabel={`Donate at ${origin.replace(/^https?:\/\//, "")}/funds/${imageFund.slug}`}
-                patchDataUrl={patchDataUrl}
+            <div className="flex gap-2 mb-3">
+              {(["portrait", "wide"] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setImageLayout(l)}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    imageLayout === l ? "bg-red-600/20 text-red-400" : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {l === "portrait" ? "Social post (1080×1350)" : "Link preview (1200×630)"}
+                </button>
+              ))}
+            </div>
+            <div className="rounded-lg overflow-hidden border border-gray-700 mb-4 bg-gray-800 min-h-[200px] flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={imageLayout}
+                src={imageUrl(imageFund, imageLayout)}
+                alt={`${imageFund.name} progress`}
                 className="w-full h-auto"
               />
             </div>
-            <button
-              onClick={downloadImage}
-              disabled={exporting}
-              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"
-            >
-              <Download size={16} /> {exporting ? "Generating..." : "Download PNG"}
-            </button>
+            <div className="flex gap-2">
+              <a
+                href={imageUrl(imageFund, imageLayout, "&download=1")}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg"
+              >
+                <Download size={16} /> Download PNG
+              </a>
+              <button
+                onClick={() => copyImageLink(imageFund)}
+                className="flex-1 flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium px-4 py-2 rounded-lg"
+              >
+                <Copy size={16} /> {copiedImage ? "Copied!" : "Copy link"}
+              </button>
+            </div>
           </div>
         </div>
       )}
