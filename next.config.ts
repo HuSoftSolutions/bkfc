@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   // The fund progress image reads its fonts from disk at request time;
   // make sure they ship with the function bundle.
   outputFileTracingIncludes: {
-    "/api/funds/\\[slug\\]/image": ["./src/assets/fonts/**/*"],
+    "/api/funds/\\[slug\\]/image": ["./src/assets/**/*"],
   },
   images: {
     remotePatterns: [

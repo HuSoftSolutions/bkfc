@@ -49,7 +49,6 @@ export async function GET(
   const res = await renderFundImage({
     fund,
     layout,
-    origin,
     updatedLabel,
     ctaLabel: `Donate at ${host}/funds/${fund.slug}`,
   });

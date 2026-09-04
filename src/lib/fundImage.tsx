@@ -47,6 +47,19 @@ function loadLocalFont(file: string) {
   return fontCache.get(file)!;
 }
 
+let patchCache: Promise<string | undefined> | undefined;
+
+/** Small bundled copy of the patch as a data URI, so no HTTP fetch per render. */
+function loadPatch() {
+  patchCache ??= readFile(join(process.cwd(), "src/assets/bkfc-patch-300.png"))
+    .then((buf) => `data:image/png;base64,${buf.toString("base64")}`)
+    .catch((err) => {
+      console.error("Failed to load patch image:", err);
+      return undefined;
+    });
+  return patchCache;
+}
+
 async function loadFonts(): Promise<FontSpec[]> {
   const [oswald, playfair] = await Promise.all([
     loadLocalFont("Oswald-Bold.woff"),
@@ -69,8 +82,6 @@ function niceStep(goal: number) {
 interface RenderOptions {
   fund: FundProgress;
   layout: "portrait" | "landscape";
-  /** Public site origin, used to load the patch image. */
-  origin: string;
   updatedLabel: string;
   ctaLabel: string;
 }
@@ -362,8 +373,8 @@ function Thermometer({ goal, pct, tubeW, tubeH, headingFont, vertical }: {
   );
 }
 
-export async function renderFundImage({ fund, layout, origin, updatedLabel, ctaLabel }: RenderOptions) {
-  const fonts = await loadFonts();
+export async function renderFundImage({ fund, layout, updatedLabel, ctaLabel }: RenderOptions) {
+  const [fonts, patchUrl] = await Promise.all([loadFonts(), loadPatch()]);
   const headingFont = fonts.some((f) => f.name === "Oswald") ? "Oswald" : "sans-serif";
   const scriptFont = fonts.some((f) => f.name === "Playfair") ? "Playfair" : "serif";
 
@@ -371,7 +382,6 @@ export async function renderFundImage({ fund, layout, origin, updatedLabel, ctaL
   const pct = Math.max(0, Math.min(1, fund.raised / goal));
   const reached = fund.goal > 0 && fund.raised >= fund.goal;
   const { width, height } = layout === "portrait" ? PORTRAIT : LANDSCAPE;
-  const patchUrl = `${origin}/bkfc-patch.png`;
 
   const frame = (
     <div
@@ -449,7 +459,7 @@ export async function renderFundImage({ fund, layout, origin, updatedLabel, ctaL
             alignItems: "center",
           }}
         >
-          <img src={patchUrl} width={140} height={140} alt="" />
+          {patchUrl && <img src={patchUrl} width={140} height={140} alt="" />}
           <div
             style={{
               fontFamily: headingFont,
@@ -533,7 +543,7 @@ export async function renderFundImage({ fund, layout, origin, updatedLabel, ctaL
 
         <div style={{ position: "absolute", top: 60, left: 70, width: 640, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
-            <img src={patchUrl} width={110} height={110} alt="" />
+            {patchUrl && <img src={patchUrl} width={110} height={110} alt="" />}
             <div style={{ display: "flex", flexDirection: "column", marginLeft: 24 }}>
               <div
                 style={{
