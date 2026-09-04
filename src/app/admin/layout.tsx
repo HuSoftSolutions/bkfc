@@ -30,6 +30,7 @@ import {
   DollarSign,
   ShoppingBag,
   Package,
+  Target,
 } from "lucide-react";
 
 type BadgeKey = keyof AdminBadges;
@@ -57,6 +58,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/products", label: "Store", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, badgeKey: "orders", badgeStyle: "count" },
   { href: "/admin/donations", label: "Donations", icon: Heart, badgeKey: "donations", badgeStyle: "count" },
+  { href: "/admin/funds", label: "Funds", icon: Target },
   { href: "/admin/finances", label: "Finances", icon: DollarSign },
   { href: "/admin/volunteers", label: "Volunteers", icon: UserPlus, badgeKey: "volunteers", badgeStyle: "alert" },
   { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },

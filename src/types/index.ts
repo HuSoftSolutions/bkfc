@@ -202,3 +202,42 @@ export interface VolunteerFormData {
   message?: string;
   recaptchaToken: string;
 }
+
+/** A named fundraising campaign donations can be earmarked for. */
+export interface Fund {
+  id: string;
+  name: string;
+  /** URL-safe identifier stored on each donation (e.g. "fire-boat"). */
+  slug: string;
+  description?: string;
+  /** Fundraising target in dollars. Omit for open-ended funds. */
+  goal?: number;
+  /** Inactive funds are hidden from the donate page but keep their history. */
+  active: boolean;
+  /** Show a public progress page at /funds/[slug]. */
+  showProgress?: boolean;
+  createdAt: string;
+}
+
+export type DonationSource = "stripe" | "manual";
+export type ManualPaymentMethod = "cash" | "check" | "other";
+
+export interface Donation {
+  id: string;
+  amount: number;
+  name: string;
+  email: string;
+  /** Fund slug; missing or "general" means the general fund. */
+  fund?: string;
+  paymentStatus: "pending" | "paid" | "failed";
+  /** "stripe" for online gifts, "manual" for in-person gifts entered by an admin. */
+  source?: DonationSource;
+  paymentMethod?: ManualPaymentMethod;
+  /** Free-form note for manual entries, e.g. check number. */
+  note?: string;
+  /** Email of the admin who recorded a manual donation. */
+  enteredBy?: string;
+  stripeSessionId?: string;
+  /** ISO timestamp; for manual entries this is the date the gift was received. */
+  createdAt: string;
+}

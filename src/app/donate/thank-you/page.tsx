@@ -7,6 +7,7 @@ import { getDb } from "@/lib/firebase";
 import Link from "next/link";
 import { Heart, CheckCircle } from "lucide-react";
 import PrintReceipt from "@/components/PrintReceipt";
+import { GENERAL_FUND_SLUG } from "@/lib/funds";
 
 interface DonationData {
   amount: number;
@@ -14,6 +15,7 @@ interface DonationData {
   email: string;
   createdAt: string;
   paymentStatus: string;
+  fund?: string;
 }
 
 export default function ThankYouPage() {
@@ -37,6 +39,17 @@ function ThankYouContent() {
   const [donation, setDonation] = useState<DonationData | null>(null);
   const [resolvedDonationId, setResolvedDonationId] = useState<string | null>(donationId);
   const [loading, setLoading] = useState(true);
+  const [fundName, setFundName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!donation?.fund || donation.fund === GENERAL_FUND_SLUG) return;
+    const slug = donation.fund;
+    getDocs(query(collection(getDb(), "funds"), where("slug", "==", slug)))
+      .then((snap) => {
+        if (!snap.empty) setFundName(snap.docs[0].data().name as string);
+      })
+      .catch(() => {});
+  }, [donation?.fund]);
 
   useEffect(() => {
     async function fetchDonation() {
@@ -95,7 +108,8 @@ function ThankYouContent() {
       <p className="text-gray-500 mb-2">
         Your generous donation
         {donation ? ` of $${donation.amount.toFixed(2)}` : ""} to the
-        Broadalbin-Kennyetto Fire Company has been received.
+        {fundName ? ` ${fundName} of the` : ""} Broadalbin-Kennyetto Fire
+        Company has been received.
       </p>
       <p className="text-gray-400 text-sm mb-8">
         A receipt has been sent to your email address.

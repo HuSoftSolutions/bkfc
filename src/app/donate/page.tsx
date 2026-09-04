@@ -1,12 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { getDb } from "@/lib/firebase";
 import Hero from "@/components/Hero";
-import { Heart, DollarSign, CheckCircle } from "lucide-react";
+import { Heart, DollarSign, CheckCircle, Target } from "lucide-react";
+import { Fund } from "@/types";
+import { GENERAL_FUND_NAME, GENERAL_FUND_SLUG } from "@/lib/funds";
 
 const PRESET_AMOUNTS = [25, 50, 100, 250, 500];
 
 export default function DonatePage() {
+  return (
+    <Suspense fallback={<DonateForm initialFund={GENERAL_FUND_SLUG} />}>
+      <DonatePageWithParams />
+    </Suspense>
+  );
+}
+
+function DonatePageWithParams() {
+  const searchParams = useSearchParams();
+  return <DonateForm initialFund={searchParams.get("fund") || GENERAL_FUND_SLUG} />;
+}
+
+function DonateForm({ initialFund }: { initialFund: string }) {
+  const [funds, setFunds] = useState<Fund[]>([]);
+  const [fund, setFund] = useState(initialFund);
   const [amount, setAmount] = useState<number | "">("");
   const [customAmount, setCustomAmount] = useState("");
   const [name, setName] = useState("");
@@ -16,6 +36,28 @@ export default function DonatePage() {
 
   const selectedAmount =
     typeof amount === "number" ? amount : parseFloat(customAmount) || 0;
+
+  useEffect(() => {
+    async function loadFunds() {
+      try {
+        const snap = await getDocs(
+          query(collection(getDb(), "funds"), where("active", "==", true))
+        );
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Fund[];
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        setFunds(list);
+        // Fall back to the general fund if the URL named a fund that's closed.
+        if (initialFund !== GENERAL_FUND_SLUG && !list.some((f) => f.slug === initialFund)) {
+          setFund(GENERAL_FUND_SLUG);
+        }
+      } catch (err) {
+        console.error("Failed to load funds:", err);
+      }
+    }
+    loadFunds();
+  }, [initialFund]);
+
+  const selectedFund = funds.find((f) => f.slug === fund);
 
   const handlePreset = (val: number) => {
     setAmount(val);
@@ -48,6 +90,7 @@ export default function DonatePage() {
           amount: selectedAmount,
           name: name || "Anonymous",
           email,
+          fund,
         }),
       });
 
@@ -93,6 +136,37 @@ export default function DonatePage() {
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+          {/* Fund selection */}
+          {funds.length > 0 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Direct my gift to
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[{ slug: GENERAL_FUND_SLUG, name: GENERAL_FUND_NAME, description: "Where it's needed most" }, ...funds].map((f) => (
+                  <button
+                    key={f.slug}
+                    type="button"
+                    onClick={() => setFund(f.slug)}
+                    className={`text-left px-4 py-3 rounded-xl border transition-colors ${
+                      fund === f.slug
+                        ? "border-red-600 bg-red-50"
+                        : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                      {f.slug !== GENERAL_FUND_SLUG && <Target size={14} className="text-red-600" />}
+                      {f.name}
+                    </span>
+                    {f.description && (
+                      <span className="block text-xs text-gray-500 mt-0.5 line-clamp-2">{f.description}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Amount selection */}
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Select Amount
@@ -168,7 +242,7 @@ export default function DonatePage() {
             {submitting
               ? "Processing..."
               : selectedAmount > 0
-              ? `Donate $${selectedAmount.toFixed(2)}`
+              ? `Donate $${selectedAmount.toFixed(2)}${selectedFund ? ` to ${selectedFund.name}` : ""}`
               : "Donate"}
           </button>
 

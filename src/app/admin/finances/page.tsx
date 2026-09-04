@@ -3,17 +3,9 @@
 import { useEffect, useState } from "react";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { EventRegistration } from "@/types";
+import { EventRegistration, Donation, Fund } from "@/types";
+import { donationFundSlug, fundLabel } from "@/lib/funds";
 import { Download, ChevronDown, ChevronRight } from "lucide-react";
-
-interface Donation {
-  id: string;
-  amount: number;
-  name: string;
-  email: string;
-  paymentStatus: "pending" | "paid" | "failed";
-  createdAt: string;
-}
 
 interface ItemBreakdown {
   name: string;
@@ -32,6 +24,7 @@ interface EventGroup {
 export default function AdminFinancesPage() {
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [funds, setFunds] = useState<Fund[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
@@ -46,12 +39,14 @@ export default function AdminFinancesPage() {
 
   async function fetchData() {
     const db = getDb();
-    const [regSnap, donSnap] = await Promise.all([
+    const [regSnap, donSnap, fundSnap] = await Promise.all([
       getDocs(query(collection(db, "registrations"), orderBy("createdAt", "desc"))),
       getDocs(query(collection(db, "donations"), orderBy("createdAt", "desc"))),
+      getDocs(collection(db, "funds")),
     ]);
     setRegistrations(regSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as EventRegistration[]);
     setDonations(donSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Donation[]);
+    setFunds(fundSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Fund[]);
   }
 
   // Filter by date range and paid status
@@ -102,6 +97,20 @@ export default function AdminFinancesPage() {
   const totalDonationRevenue = paidDonations.reduce((sum, d) => sum + d.amount, 0);
   const totalRevenue = totalEventRevenue + totalDonationRevenue;
 
+  // Per-fund donation totals, split by online vs. in-person
+  const fundGroups = (() => {
+    const map = new Map<string, { slug: string; name: string; total: number; count: number; manual: number }>();
+    for (const don of paidDonations) {
+      const slug = donationFundSlug(don.fund);
+      const g = map.get(slug) || { slug, name: fundLabel(slug, funds), total: 0, count: 0, manual: 0 };
+      g.total += don.amount;
+      g.count += 1;
+      if (don.source === "manual") g.manual += don.amount;
+      map.set(slug, g);
+    }
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  })();
+
   const toggleEvent = (title: string) => {
     setExpandedEvents((prev) => {
       const next = new Set(prev);
@@ -113,7 +122,7 @@ export default function AdminFinancesPage() {
 
   const exportCsv = () => {
     const rows: string[][] = [];
-    rows.push(["Category", "Event/Source", "Item", "Quantity", "Amount", "Name", "Email", "Date"]);
+    rows.push(["Category", "Event/Fund", "Item", "Quantity", "Amount", "Name", "Email", "Date", "Method", "Note"]);
 
     for (const group of eventGroups) {
       for (const reg of group.registrations) {
@@ -135,13 +144,15 @@ export default function AdminFinancesPage() {
     for (const don of paidDonations) {
       rows.push([
         "Donation",
-        "General Donation",
+        fundLabel(don.fund, funds),
         "",
         "",
         `$${don.amount.toFixed(2)}`,
         don.name,
         don.email,
         new Date(don.createdAt).toLocaleDateString(),
+        don.source === "manual" ? don.paymentMethod || "manual" : "card",
+        don.note || "",
       ]);
     }
 
@@ -151,6 +162,11 @@ export default function AdminFinancesPage() {
     rows.push(["Total Revenue", "", "", "", `$${totalRevenue.toFixed(2)}`]);
     rows.push(["Event Revenue", "", "", "", `$${totalEventRevenue.toFixed(2)}`]);
     rows.push(["Donation Revenue", "", "", "", `$${totalDonationRevenue.toFixed(2)}`]);
+    rows.push([]);
+    rows.push(["--- FUND BREAKDOWN ---"]);
+    for (const g of fundGroups) {
+      rows.push([g.name, "", "", "", `$${g.total.toFixed(2)}`, `${g.count} donations`, `$${g.manual.toFixed(2)} in person`]);
+    }
     rows.push([]);
     rows.push(["--- EVENT BREAKDOWN ---"]);
     for (const group of eventGroups) {
@@ -312,13 +328,30 @@ export default function AdminFinancesPage() {
           <span className="text-green-400 font-medium text-sm">${totalDonationRevenue.toFixed(2)}</span>
         </button>
 
+        {donationsExpanded && fundGroups.length > 1 && (
+          <div className="border-t border-gray-800 px-4 py-3">
+            <p className="text-gray-500 text-xs uppercase mb-2">By Fund</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {fundGroups.map((g) => (
+                <div key={g.slug} className="bg-gray-800/60 rounded-lg px-3 py-2">
+                  <p className="text-white text-sm font-medium">{g.name}</p>
+                  <p className="text-green-400 text-sm font-semibold">${g.total.toFixed(2)}</p>
+                  <p className="text-gray-500 text-[11px]">
+                    {g.count} gifts{g.manual > 0 ? ` · $${g.manual.toFixed(2)} in person` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {donationsExpanded && paidDonations.length > 0 && (
           <div className="border-t border-gray-800 px-4 py-3">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-gray-500 text-xs uppercase">
                   <th className="text-left pb-2">Donor</th>
-                  <th className="text-left pb-2">Email</th>
+                  <th className="text-left pb-2">Fund</th>
                   <th className="text-left pb-2">Date</th>
                   <th className="text-right pb-2">Amount</th>
                 </tr>
@@ -326,8 +359,13 @@ export default function AdminFinancesPage() {
               <tbody>
                 {paidDonations.map((don) => (
                   <tr key={don.id} className="border-t border-gray-800/50">
-                    <td className="text-gray-300 py-1.5">{don.name}</td>
-                    <td className="text-gray-500 py-1.5">{don.email}</td>
+                    <td className="text-gray-300 py-1.5">
+                      {don.name}
+                      {don.source === "manual" && (
+                        <span className="ml-2 text-[10px] uppercase text-blue-300">{don.paymentMethod || "manual"}</span>
+                      )}
+                    </td>
+                    <td className="text-gray-500 py-1.5">{fundLabel(don.fund, funds)}</td>
                     <td className="text-gray-500 py-1.5">{new Date(don.createdAt).toLocaleDateString()}</td>
                     <td className="text-white text-right py-1.5">${don.amount.toFixed(2)}</td>
                   </tr>

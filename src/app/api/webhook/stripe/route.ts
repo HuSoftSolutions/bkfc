@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { donationFundSlug, GENERAL_FUND_NAME, GENERAL_FUND_SLUG } from "@/lib/funds";
 import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml, buildProductReceiptHtml, buildProductAdminHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
@@ -74,11 +75,16 @@ export async function POST(req: NextRequest) {
         const donName = session.metadata.name || "Anonymous";
         const donEmail = session.customer_email || session.customer_details?.email || "";
         const donAmount = parseFloat(session.metadata.amount || "0");
+        const donFund = donationFundSlug(session.metadata.fund);
+        const donFundName = session.metadata.fundName || GENERAL_FUND_NAME;
+        const fundLine = donFund === GENERAL_FUND_SLUG ? "" : ` to the <strong>${donFundName}</strong>`;
 
         await db.collection("donations").add({
           amount: donAmount,
           name: donName,
           email: donEmail,
+          fund: donFund,
+          source: "stripe",
           paymentStatus: "paid",
           stripeSessionId: session.id,
           createdAt: new Date().toISOString(),
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest) {
             donEmail,
             "Thank You for Your Donation — BKFC",
             `<h2>Thank You for Your Donation!</h2>
-            <p>Your generous donation of <strong>$${donAmount.toFixed(2)}</strong> to the Broadalbin-Kennyetto Fire Company has been received.</p>
+            <p>Your generous donation of <strong>$${donAmount.toFixed(2)}</strong>${fundLine} to the Broadalbin-Kennyetto Fire Company has been received.</p>
             <p>Your support helps us maintain equipment, fund training, and continue protecting our community.</p>
             <p style="color:#666;font-size:14px;margin-top:16px">Broadalbin-Kennyetto Fire Company<br>14 Pine Street, Broadalbin, NY 12025</p>`
           );
@@ -99,7 +105,8 @@ export async function POST(req: NextRequest) {
             `<h2>New Donation Received</h2>
             <p><strong>Name:</strong> ${donName}</p>
             <p><strong>Email:</strong> ${donEmail}</p>
-            <p><strong>Amount:</strong> $${donAmount.toFixed(2)}</p>`,
+            <p><strong>Amount:</strong> $${donAmount.toFixed(2)}</p>
+            <p><strong>Fund:</strong> ${donFundName}</p>`,
             "donation"
           );
         } catch (err) {
