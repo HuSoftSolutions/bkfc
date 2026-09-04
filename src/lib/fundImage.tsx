@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { FundProgress } from "@/lib/fundProgress";
 import { formatMoney } from "@/lib/funds";
 
@@ -26,36 +28,29 @@ interface FontSpec {
 
 const fontCache = new Map<string, Promise<ArrayBuffer | null>>();
 
-/** Fetch a Google Font file (an old-browser UA makes the CSS API return TTF/WOFF, not WOFF2). */
-function loadGoogleFont(family: string, weight: number, italic = false) {
-  const key = `${family}:${weight}:${italic}`;
-  if (!fontCache.has(key)) {
+/**
+ * Fonts ship with the app (src/assets/fonts) so rendering never waits on
+ * an external request. Read once per function instance.
+ */
+function loadLocalFont(file: string) {
+  if (!fontCache.has(file)) {
     fontCache.set(
-      key,
-      (async () => {
-        try {
-          const spec = italic ? `ital,wght@1,${weight}` : `wght@${weight}`;
-          const css = await fetch(
-            `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:${spec}`,
-            { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 6.1; rv:5.0) Gecko/20100101 Firefox/5.0" } }
-          ).then((r) => r.text());
-          // The old-browser UA yields TTF or WOFF; Satori accepts both.
-          const url = css.match(/src: url\((https:[^)]+\.(?:ttf|otf|woff))\)/)?.[1];
-          if (!url) return null;
-          return await fetch(url).then((r) => r.arrayBuffer());
-        } catch {
+      file,
+      readFile(join(process.cwd(), "src/assets/fonts", file))
+        .then((buf) => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer)
+        .catch((err) => {
+          console.error(`Failed to load font ${file}:`, err);
           return null;
-        }
-      })()
+        })
     );
   }
-  return fontCache.get(key)!;
+  return fontCache.get(file)!;
 }
 
 async function loadFonts(): Promise<FontSpec[]> {
   const [oswald, playfair] = await Promise.all([
-    loadGoogleFont("Oswald", 700),
-    loadGoogleFont("Playfair Display", 700, true),
+    loadLocalFont("Oswald-Bold.woff"),
+    loadLocalFont("PlayfairDisplay-BoldItalic.woff"),
   ]);
   const fonts: FontSpec[] = [];
   if (oswald) fonts.push({ name: "Oswald", data: oswald, weight: 700, style: "normal" });
@@ -608,7 +603,7 @@ export async function renderFundImage({ fund, layout, origin, updatedLabel, ctaL
     height,
     fonts: fonts.length ? fonts : undefined,
     headers: {
-      "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
+      "Cache-Control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800",
       "Content-Disposition": `inline; filename="${fund.slug}-progress.png"`,
     },
   });
