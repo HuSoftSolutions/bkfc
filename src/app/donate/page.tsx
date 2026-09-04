@@ -159,7 +159,9 @@ function DonateForm({ initialFund }: { initialFund: string }) {
                       {f.name}
                     </span>
                     {f.description && (
-                      <span className="block text-xs text-gray-500 mt-0.5 line-clamp-2">{f.description}</span>
+                      <span className="block text-xs text-gray-500 mt-0.5 line-clamp-2">
+                        {f.description.split(/\n\s*\n/)[0]}
+                      </span>
                     )}
                   </button>
                 ))}

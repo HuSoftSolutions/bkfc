@@ -22,7 +22,9 @@ export async function generateMetadata({
     fund.goal > 0
       ? `${formatMoney(fund.raised)} raised of our ${formatMoney(fund.goal)} goal.`
       : `${formatMoney(fund.raised)} raised so far.`;
-  const description = [fund.description, progress].filter(Boolean).join(" ");
+  const firstParagraph = fund.description.split(/\n\s*\n/)[0]?.trim() || "";
+  const summary = firstParagraph.length > 160 ? `${firstParagraph.slice(0, 157).trimEnd()}…` : firstParagraph;
+  const description = [summary, progress].filter(Boolean).join(" ");
 
   // Version the preview URL by the raised total so social networks that
   // cache by URL pick up new numbers after a donation.

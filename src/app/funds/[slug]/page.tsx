@@ -91,7 +91,7 @@ export default function FundPage({ params }: { params: Promise<{ slug: string }>
     <>
       <Hero
         title={fund?.name || "Fundraiser"}
-        subtitle={fund?.description || undefined}
+        subtitle="Help us reach our goal"
         useSettingsImage
       />
 
@@ -186,6 +186,30 @@ export default function FundPage({ params }: { params: Promise<{ slug: string }>
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* About this fund */}
+        {fund?.description && (
+          <div className="mt-12 sm:mt-16 max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">About this fund</h2>
+            <div className="space-y-4 text-gray-600 leading-relaxed">
+              {fund.description
+                .split(/\n\s*\n/)
+                .map((p) => p.trim())
+                .filter(Boolean)
+                .map((paragraph, i) => (
+                  <p key={i} className="whitespace-pre-line">{paragraph}</p>
+                ))}
+            </div>
+            {fund.active && (
+              <Link
+                href={`/donate?fund=${fund.slug}`}
+                className="mt-8 inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors"
+              >
+                <Heart size={18} /> Donate to this fund
+              </Link>
+            )}
           </div>
         )}
       </section>

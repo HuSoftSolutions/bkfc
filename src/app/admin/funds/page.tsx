@@ -336,12 +336,15 @@ export default function AdminFundsPage() {
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Description</label>
                 <textarea
-                  rows={3}
+                  rows={8}
                   value={editing.description || ""}
                   onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                  placeholder="Shown on the donate page and public progress page"
-                  className={`${inputClass} resize-none`}
+                  placeholder="Tell the story of this campaign. Separate paragraphs with a blank line."
+                  className={`${inputClass} resize-y`}
                 />
+                <p className="text-gray-500 text-[11px] mt-1">
+                  Shown in full on the public fund page. The first paragraph is used as the short summary on the donate page and in link previews.
+                </p>
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Goal ($)</label>
