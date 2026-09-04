@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { donationFundSlug, GENERAL_FUND_NAME, GENERAL_FUND_SLUG } from "@/lib/funds";
+import { regenerateFundImages } from "@/lib/fundImageStore";
 import { sendEmail, sendNotificationEmail, buildCustomerReceiptHtml, buildAdminNotificationHtml, buildProductReceiptHtml, buildProductAdminHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
@@ -89,6 +90,15 @@ export async function POST(req: NextRequest) {
           stripeSessionId: session.id,
           createdAt: new Date().toISOString(),
         });
+
+        // Refresh the fund's pre-rendered progress images with the new total.
+        if (donFund !== GENERAL_FUND_SLUG) {
+          try {
+            await regenerateFundImages(donFund);
+          } catch (err) {
+            console.error("Failed to regenerate fund images", { fund: donFund, err });
+          }
+        }
 
         try {
           if (!donEmail) throw new Error("No donor email on Stripe session");

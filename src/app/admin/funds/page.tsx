@@ -16,6 +16,7 @@ import QRCode from "qrcode";
 import { getDb } from "@/lib/firebase";
 import { Fund, Donation } from "@/types";
 import { donationFundSlug, formatMoney, slugifyFund, GENERAL_FUND_SLUG } from "@/lib/funds";
+import { regenerateFundImage } from "@/lib/regenerateFundImage";
 import {
   Plus,
   Pencil,
@@ -121,6 +122,7 @@ export default function AdminFundsPage() {
       } else {
         await addDoc(collection(getDb(), "funds"), { ...data, createdAt: new Date().toISOString() });
       }
+      if (data.showProgress) await regenerateFundImage(slug);
       setEditing(null);
       await fetchAll();
     } catch (err) {

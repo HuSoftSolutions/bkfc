@@ -15,6 +15,7 @@ import {
 import { getDb, getAppAuth } from "@/lib/firebase";
 import { Donation, Fund, ManualPaymentMethod } from "@/types";
 import { donationFundSlug, fundLabel, GENERAL_FUND_NAME, GENERAL_FUND_SLUG } from "@/lib/funds";
+import { regenerateFundImage } from "@/lib/regenerateFundImage";
 import { CheckCircle, Clock, Heart, Plus, Pencil, Trash2, X, HandCoins, Target } from "lucide-react";
 import AdminPagination from "@/components/AdminPagination";
 
@@ -139,7 +140,9 @@ export default function AdminDonationsPage() {
         source: "manual" as const,
       };
       if (form.id) {
+        const previousFund = donationFundSlug(donations.find((d) => d.id === form.id)?.fund);
         await updateDoc(doc(getDb(), "donations", form.id), { ...data, createdAt });
+        if (previousFund !== data.fund) await regenerateFundImage(previousFund);
       } else {
         await addDoc(collection(getDb(), "donations"), {
           ...data,
@@ -147,6 +150,7 @@ export default function AdminDonationsPage() {
           enteredBy: getAppAuth().currentUser?.email || "",
         });
       }
+      await regenerateFundImage(data.fund);
       setForm(null);
       await fetchAll();
     } catch (err) {
@@ -160,6 +164,7 @@ export default function AdminDonationsPage() {
   const handleDelete = async (d: Donation) => {
     if (!confirm(`Delete the $${d.amount.toFixed(2)} donation from ${d.name}? This cannot be undone.`)) return;
     await deleteDoc(doc(getDb(), "donations", d.id));
+    await regenerateFundImage(donationFundSlug(d.fund));
     await fetchAll();
   };
 
