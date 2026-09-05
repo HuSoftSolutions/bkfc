@@ -8,7 +8,9 @@
  * message the form can show to the user instead of submitting a blank token.
  */
 
-export const RECAPTCHA_CONFIGURED = !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+export const RECAPTCHA_CONFIGURED = !!cleanEnvValue(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+
+import { cleanEnvValue } from "@/lib/cleanEnv";
 
 export class RecaptchaUnavailableError extends Error {
   constructor() {

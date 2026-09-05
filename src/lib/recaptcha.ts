@@ -1,5 +1,7 @@
+import { cleanEnvValue } from "@/lib/cleanEnv";
+
 export async function verifyRecaptcha(token: string): Promise<boolean> {
-  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  const secret = cleanEnvValue(process.env.RECAPTCHA_SECRET_KEY);
 
   // Skip verification if not configured or no token provided
   if (!secret || !token) return true;
@@ -8,7 +10,7 @@ export async function verifyRecaptcha(token: string): Promise<boolean> {
     const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `secret=${secret}&response=${token}`,
+      body: new URLSearchParams({ secret, response: token }).toString(),
     });
 
     const data = await res.json();
