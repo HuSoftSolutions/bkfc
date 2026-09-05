@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import Hero from "@/components/Hero";
 import { formatPhoneNumber } from "@/lib/formatPhone";
+import { getRecaptchaToken } from "@/lib/recaptchaClient";
 
 export default function VolunteerPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -33,14 +34,7 @@ export default function VolunteerPage() {
       setStatus("sending");
 
       try {
-        let recaptchaToken = "";
-        try {
-          if (executeRecaptcha) {
-            recaptchaToken = await executeRecaptcha("volunteer");
-          }
-        } catch {
-          // reCAPTCHA not configured — continue without it
-        }
+        const recaptchaToken = await getRecaptchaToken(executeRecaptcha, "volunteer");
 
         const res = await fetch("/api/volunteer", {
           method: "POST",

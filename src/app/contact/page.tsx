@@ -4,11 +4,13 @@ import { useState, useCallback } from "react";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import Hero from "@/components/Hero";
 import { formatPhoneNumber } from "@/lib/formatPhone";
+import { getRecaptchaToken } from "@/lib/recaptchaClient";
 import { useContactEmail } from "@/lib/useContactEmail";
 import { Phone, Mail, MapPin } from "lucide-react";
 
 export default function ContactPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
+  const [errorMsg, setErrorMsg] = useState("");
   const contactEmail = useContactEmail();
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -19,14 +21,7 @@ export default function ContactPage() {
       setStatus("sending");
 
       try {
-        let recaptchaToken = "";
-        try {
-          if (executeRecaptcha) {
-            recaptchaToken = await executeRecaptcha("contact");
-          }
-        } catch {
-          // reCAPTCHA not configured — continue without it
-        }
+        const recaptchaToken = await getRecaptchaToken(executeRecaptcha, "contact");
 
         const res = await fetch("/api/contact", {
           method: "POST",
@@ -34,10 +29,14 @@ export default function ContactPage() {
           body: JSON.stringify({ ...form, recaptchaToken }),
         });
 
-        if (!res.ok) throw new Error("Failed to send");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to send");
+        }
         setStatus("sent");
         setForm({ name: "", email: "", phone: "", message: "" });
-      } catch {
+      } catch (err) {
+        setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
         setStatus("error");
       }
     },
@@ -158,7 +157,7 @@ export default function ContactPage() {
               )}
               {status === "error" && (
                 <p className="text-red-600 text-sm">
-                  Something went wrong. Please try again or email us directly.
+                  {errorMsg || "Something went wrong."} Please try again or email us directly.
                 </p>
               )}
             </form>
